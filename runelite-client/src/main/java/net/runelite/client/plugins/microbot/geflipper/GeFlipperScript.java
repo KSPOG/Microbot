@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class GeFlipperScript extends Script {
-    // Fetch volume data from the OSRS Wiki but use RuneLite's API for prices
-    private static final String VOLUME_API = "https://prices.runescape.wiki/api/v1/osrs/5m?id=";
+    // Fetch volume data from GE Tracker but use RuneLite's API for prices
+    private static final String VOLUME_API = "https://www.ge-tracker.com/api/items/";
     private static final int MAX_TRADE_LIMIT = 50;
     private static final int GE_SLOT_COUNT = 3;
     private static final int MIN_VOLUME = 100;
@@ -225,17 +225,15 @@ public class GeFlipperScript extends Script {
             }
 
             JsonObject data = obj.getAsJsonObject("data");
-            JsonObject itemData = data.has(Integer.toString(itemId)) && data.get(Integer.toString(itemId)).isJsonObject()
-                    ? data.getAsJsonObject(Integer.toString(itemId)) : null;
-            if (itemData == null) {
+            if (data == null) {
                 Microbot.log(itemName + " volume data missing, skipping");
                 return null;
             }
 
-            int highVol = itemData.has("highPriceVolume") && !itemData.get("highPriceVolume").isJsonNull()
-                    ? itemData.get("highPriceVolume").getAsInt() : 0;
-            int lowVol = itemData.has("lowPriceVolume") && !itemData.get("lowPriceVolume").isJsonNull()
-                    ? itemData.get("lowPriceVolume").getAsInt() : 0;
+            int highVol = data.has("sellingQuantity") && !data.get("sellingQuantity").isJsonNull()
+                    ? data.get("sellingQuantity").getAsInt() : 0;
+            int lowVol = data.has("buyingQuantity") && !data.get("buyingQuantity").isJsonNull()
+                    ? data.get("buyingQuantity").getAsInt() : 0;
 
             int low = Microbot.getItemManager().getItemPriceWithSource(itemId, false);
             int high = Microbot.getItemManager().getItemPriceWithSource(itemId, true);
