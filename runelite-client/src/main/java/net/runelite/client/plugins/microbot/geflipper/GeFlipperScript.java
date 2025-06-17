@@ -25,7 +25,8 @@ import java.util.HashMap;
 @Slf4j
 public class GeFlipperScript extends Script {
     private static final String PRICE_API = "https://prices.runescape.wiki/api/v1/osrs/5m?id=";
-    private static final String LIMIT_API = "https://prices.runescape.wiki/api/v1/osrs/limit?id=";
+    // Fetch trade limits from flipping.gg
+    private static final String LIMIT_API = "https://www.flipping.gg/api/limit?id=";
     private static final int MAX_TRADE_LIMIT = 50;
     private static final int GE_SLOT_COUNT = 3;
     private static final int MIN_VOLUME = 100;
