@@ -23,6 +23,7 @@ public class GeFlipperScript extends Script {
     private final Queue<Integer> items = new ArrayDeque<>();
     private final java.util.List<Integer> f2pItems = new java.util.ArrayList<>();
     private final java.util.Random random = new java.util.Random();
+    private final java.util.Set<Integer> marginChecked = new java.util.HashSet<>();
 
     private GeFlipperPlugin plugin;
     private GeFlipperConfig config;
@@ -35,6 +36,7 @@ public class GeFlipperScript extends Script {
         int quantity;
         int slot;
         boolean buying;
+        boolean marginCheck;
     }
 
     private long lastAction;
@@ -97,6 +99,7 @@ public class GeFlipperScript extends Script {
         f2pItems.addAll(loadF2pItems());
         items.clear();
         items.addAll(f2pItems);
+        marginChecked.clear();
 
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -216,16 +219,30 @@ public class GeFlipperScript extends Script {
             }
 
             int coins = getCoins();
-            int quantity = Math.min(Math.min(Math.min(limit, MAX_TRADE_LIMIT), remaining), coins / buyPrice);
-            if (quantity <= 0) {
-                Microbot.log("Not enough gp to buy " + itemName);
-                Microbot.status = "Insufficient gp";
-                return null;
-            }
+            int quantity;
             ActiveOffer offer = new ActiveOffer();
             offer.itemId = itemId;
-            offer.buyPrice = buyPrice;
-            offer.sellPrice = sellPrice;
+            if (!marginChecked.contains(itemId)) {
+                offer.buyPrice = (int) Math.ceil(high * 1.05); // check margin +5%
+                offer.sellPrice = (int) Math.floor(low * 0.95); // sell quickly -5%
+                if (coins < offer.buyPrice) {
+                    Microbot.log("Not enough gp to buy " + itemName);
+                    Microbot.status = "Insufficient gp";
+                    return null;
+                }
+                quantity = 1;
+                offer.marginCheck = true;
+            } else {
+                quantity = Math.min(Math.min(Math.min(limit, MAX_TRADE_LIMIT), remaining), coins / buyPrice);
+                if (quantity <= 0) {
+                    Microbot.log("Not enough gp to buy " + itemName);
+                    Microbot.status = "Insufficient gp";
+                    return null;
+                }
+                offer.buyPrice = buyPrice;
+                offer.sellPrice = sellPrice;
+                offer.marginCheck = false;
+            }
             offer.quantity = quantity;
             return offer;
         } catch (Exception ex) {
@@ -258,9 +275,12 @@ public class GeFlipperScript extends Script {
             } else {
                 if (geOffer.getState() == net.runelite.api.GrandExchangeOfferState.SOLD) {
                     Rs2GrandExchange.collectToBank();
-                    plugin.addProfit((offer.sellPrice - offer.buyPrice) * offer.quantity);
+                    if (!offer.marginCheck) {
+                        plugin.addProfit((offer.sellPrice - offer.buyPrice) * offer.quantity);
+                    }
                     limits.reduceRemaining(offer.itemId, offer.quantity);
                     items.offer(offer.itemId);
+                    marginChecked.add(offer.itemId);
                     java.util.List<Integer> tmp = new java.util.ArrayList<>(items);
                     java.util.Collections.shuffle(tmp, random);
                     items.clear();
@@ -283,6 +303,7 @@ public class GeFlipperScript extends Script {
         offers.clear();
         items.clear();
         limits.clear();
+        marginChecked.clear();
     }
 
 }
