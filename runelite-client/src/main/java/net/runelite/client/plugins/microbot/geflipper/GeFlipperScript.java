@@ -8,14 +8,6 @@ import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.api.ItemID;
 import net.runelite.api.ItemComposition;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
-import java.io.StringReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -23,13 +15,8 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class GeFlipperScript extends Script {
-    // Prices are retrieved from the OSRS Wiki 5m API
-    // Trade volume continues to use GE Tracker
-    private static final String PRICE_API = "https://prices.runescape.wiki/api/v1/osrs/5m?id=";
+    // Trade volume continues to use GE Tracker. Prices come from margin checks
     private static final String USER_AGENT = "Microbot GE Flipper";
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .build();
     private static final int MAX_TRADE_LIMIT = 50;
     private static final int GE_SLOT_COUNT = 3;
     private static final int MIN_VOLUME = 100;
@@ -39,6 +26,7 @@ public class GeFlipperScript extends Script {
     private final java.util.List<Integer> f2pItems = new java.util.ArrayList<>();
     private final java.util.Random random = new java.util.Random();
     private final java.util.Set<Integer> marginChecked = new java.util.HashSet<>();
+    private final java.util.Map<Integer, int[]> margins = new java.util.HashMap<>();
 
     private GeFlipperPlugin plugin;
     private GeFlipperConfig config;
@@ -48,6 +36,8 @@ public class GeFlipperScript extends Script {
         int itemId;
         int buyPrice;
         int sellPrice;
+        int actualBuyPrice;
+        int actualSellPrice;
         int quantity;
         int slot;
         boolean buying;
@@ -58,50 +48,7 @@ public class GeFlipperScript extends Script {
     private final java.util.List<ActiveOffer> offers = new java.util.ArrayList<>();
     private final Limits limits = new Limits();
 
-    private JsonObject parseJson(String json) {
-        JsonReader reader = new JsonReader(new StringReader(json));
-        reader.setLenient(true);
-        try {
-            var element = new JsonParser().parse(reader);
-            if (!element.isJsonObject()) {
-                log.error("Response was not JSON: {}", json.length() > 100 ? json.substring(0, 100) : json);
-                return null;
-            }
-            return element.getAsJsonObject();
-        } catch (Exception ex) {
-            log.error("Failed to parse JSON", ex);
-            return null;
-        }
-    }
-
-    private int[] fetchPrices(int itemId) {
-        try {
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(PRICE_API + itemId))
-                    .header("User-Agent", USER_AGENT)
-                    .build();
-            HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() != 200) {
-                log.info("Price fetch failed: {}", resp.statusCode());
-                return null;
-            }
-            JsonObject obj = parseJson(resp.body());
-            if (obj == null || !obj.has("data")) {
-                return null;
-            }
-            JsonObject data = obj.getAsJsonObject("data");
-            JsonObject item = data.getAsJsonObject(String.valueOf(itemId));
-            if (item == null || item.get("avgHighPrice").isJsonNull() || item.get("avgLowPrice").isJsonNull()) {
-                return null;
-            }
-            int high = item.get("avgHighPrice").getAsInt();
-            int low = item.get("avgLowPrice").getAsInt();
-            return new int[]{high, low};
-        } catch (Exception ex) {
-            log.error("Failed to fetch prices for {}", itemId, ex);
-            return null;
-        }
-    }
+    // No JSON parsing methods are needed since prices are discovered via margin checks
 
     private int getCoins() {
         return Rs2Inventory.itemQuantity(ItemID.COINS_995);
@@ -160,6 +107,7 @@ public class GeFlipperScript extends Script {
         items.clear();
         items.addAll(f2pItems);
         marginChecked.clear();
+        margins.clear();
 
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -245,28 +193,7 @@ public class GeFlipperScript extends Script {
             int highVol = Rs2GrandExchange.getSellingVolume(itemId);
             int lowVol = Rs2GrandExchange.getBuyingVolume(itemId);
 
-            int[] prices = fetchPrices(itemId);
-            if (prices == null) {
-                Microbot.log(itemName + " price lookup failed, skipping");
-                Microbot.status = "No price";
-                return null;
-            }
-            int high = prices[0];
-            int low = prices[1];
-            int sellPrice = (int) Math.ceil(high * 1.05); // sell for +5%
-            int buyPrice = (int) Math.floor(low * 0.95); // buy for -5%
-
             Integer limit = limits.fetchLimit(itemId);
-            if (high == 0 || low == 0) {
-                Microbot.log(itemName + " price lookup failed, skipping");
-                Microbot.status = "No price";
-                return null;
-            }
-            if (sellPrice - buyPrice < MIN_PROFIT) {
-                Microbot.log(itemName + " margin below " + MIN_PROFIT + "gp, skipping");
-                Microbot.status = "Bad margin";
-                return null;
-            }
             if (highVol < MIN_VOLUME || lowVol < MIN_VOLUME) {
                 Microbot.log(itemName + " volume too low, skipping");
                 Microbot.status = "Low volume";
@@ -288,9 +215,17 @@ public class GeFlipperScript extends Script {
             int quantity;
             ActiveOffer offer = new ActiveOffer();
             offer.itemId = itemId;
-            if (!marginChecked.contains(itemId)) {
-                offer.buyPrice = (int) Math.ceil(high * 1.05); // check margin +5%
-                offer.sellPrice = (int) Math.floor(low * 0.95); // sell quickly -5%
+
+            if (!margins.containsKey(itemId)) {
+                int basePrice = Microbot.getClientThread()
+                        .runOnClientThread(() -> Microbot.getItemManager().getItemPriceWithSource(itemId, false));
+                if (basePrice <= 0) {
+                    Microbot.log(itemName + " price data missing, skipping");
+                    Microbot.status = "No price";
+                    return null;
+                }
+                offer.buyPrice = (int) Math.ceil(basePrice * 1.05); // margin check +5%
+                offer.sellPrice = (int) Math.floor(basePrice * 0.95); // margin check -5%
                 if (coins < offer.buyPrice) {
                     Microbot.log("Not enough gp to buy " + itemName);
                     Microbot.status = "Insufficient gp";
@@ -299,6 +234,14 @@ public class GeFlipperScript extends Script {
                 quantity = 1;
                 offer.marginCheck = true;
             } else {
+                int[] margin = margins.get(itemId);
+                int buyPrice = margin[0];
+                int sellPrice = margin[1];
+                if (sellPrice - buyPrice < MIN_PROFIT) {
+                    Microbot.log(itemName + " margin below " + MIN_PROFIT + "gp, skipping");
+                    Microbot.status = "Bad margin";
+                    return null;
+                }
                 quantity = Math.min(Math.min(Math.min(limit, MAX_TRADE_LIMIT), remaining), coins / buyPrice);
                 if (quantity <= 0) {
                     Microbot.log("Not enough gp to buy " + itemName);
@@ -332,6 +275,7 @@ public class GeFlipperScript extends Script {
             }
             if (offer.buying) {
                 if (geOffer.getState() == net.runelite.api.GrandExchangeOfferState.BOUGHT) {
+                    offer.actualBuyPrice = geOffer.getSpent() / Math.max(1, geOffer.getQuantitySold());
                     Rs2GrandExchange.collect(false);
                     offer.buying = false;
                     String name = getItemName(offer.itemId);
@@ -340,13 +284,16 @@ public class GeFlipperScript extends Script {
                 }
             } else {
                 if (geOffer.getState() == net.runelite.api.GrandExchangeOfferState.SOLD) {
+                    offer.actualSellPrice = geOffer.getSpent() / Math.max(1, geOffer.getQuantitySold());
                     Rs2GrandExchange.collectToBank();
-                    if (!offer.marginCheck) {
+                    if (offer.marginCheck) {
+                        margins.put(offer.itemId, new int[]{offer.actualSellPrice, offer.actualBuyPrice});
+                        marginChecked.add(offer.itemId);
+                    } else {
                         plugin.addProfit((offer.sellPrice - offer.buyPrice) * offer.quantity);
+                        limits.reduceRemaining(offer.itemId, offer.quantity);
+                        items.offer(offer.itemId);
                     }
-                    limits.reduceRemaining(offer.itemId, offer.quantity);
-                    items.offer(offer.itemId);
-                    marginChecked.add(offer.itemId);
                     java.util.List<Integer> tmp = new java.util.ArrayList<>(items);
                     java.util.Collections.shuffle(tmp, random);
                     items.clear();
@@ -370,6 +317,7 @@ public class GeFlipperScript extends Script {
         items.clear();
         limits.clear();
         marginChecked.clear();
+        margins.clear();
     }
 
 }
