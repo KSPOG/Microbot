@@ -36,7 +36,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static net.runelite.client.plugins.microbot.util.Global.*;
 
@@ -730,49 +729,6 @@ public class Rs2GrandExchange {
         }
     }
 
-    public static int getBuyingVolume(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("buyingQuantity").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return -1;
-        }
-    }
-
-    public static int getSellingVolume(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("sellingQuantity").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return -1;
-        }
-    }
 
     /**
      * Read the buy limit text from the currently selected GE offer.
