@@ -18,6 +18,7 @@ public class GeFlipperScript extends Script {
     private static final int MAX_TRADE_LIMIT = 50;
     private static final int GE_SLOT_COUNT = 3;
     private static final int MIN_VOLUME = 100;
+    private static final int MIN_PROFIT = 1;
 
     private final Queue<Integer> items = new ArrayDeque<>();
     private final java.util.List<Integer> f2pItems = new java.util.ArrayList<>();
@@ -190,8 +191,8 @@ public class GeFlipperScript extends Script {
                 Microbot.status = "No price";
                 return null;
             }
-            if (high <= low) {
-                Microbot.log(itemName + " margin non-positive, skipping");
+            if (high - low < MIN_PROFIT) {
+                Microbot.log(itemName + " margin below " + MIN_PROFIT + "gp, skipping");
                 Microbot.status = "Bad margin";
                 return null;
             }
