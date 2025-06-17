@@ -52,6 +52,9 @@ public class GeFlipperPlugin extends Plugin {
     protected void shutDown() {
         script.shutdown();
         overlayManager.remove(overlay);
+        startTime = null;
+        profit = 0;
+        Microbot.status = "IDLE";
     }
 
     void addProfit(int gp) { profit += gp; }

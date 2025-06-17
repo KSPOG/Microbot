@@ -41,6 +41,7 @@ public class GeFlipperScript extends Script {
 
     private GeFlipperPlugin plugin;
     private GeFlipperConfig config;
+    private boolean running;
 
     private static class ActiveOffer {
         int itemId;
@@ -115,8 +116,12 @@ public class GeFlipperScript extends Script {
     }
 
     public boolean run(GeFlipperPlugin plugin, GeFlipperConfig config) {
+        if (running) {
+            return false;
+        }
         this.plugin = plugin;
         this.config = config;
+        running = true;
         Microbot.enableAutoRunOn = false;
 
         f2pItems.clear();
@@ -368,6 +373,11 @@ public class GeFlipperScript extends Script {
     @Override
     public void shutdown() {
         super.shutdown();
+        running = false;
+        offers.clear();
+        items.clear();
+        remainingLimits.clear();
+        limitResetTimes.clear();
     }
 
     private void updateRemainingLimit(int itemId, int qty) {
