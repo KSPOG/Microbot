@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class GEFlipperScript extends Script {
     public static String status = "Idle";
     public static int profit = 0;
-    private long startTime;
+    private static long startTime;
     private final Rs2ItemManager itemManager = new Rs2ItemManager();
 
     private static final List<String> F2P_ITEMS = Arrays.asList(
@@ -78,7 +78,7 @@ public class GEFlipperScript extends Script {
     }
 
     public static String getProfitPerHour() {
-        long timeRan = System.currentTimeMillis() - Microbot.getScriptTimer();
+        long timeRan = System.currentTimeMillis() - startTime;
         if (timeRan <= 0) {
             return "0";
         }
@@ -90,5 +90,6 @@ public class GEFlipperScript extends Script {
     public void shutdown() {
         super.shutdown();
         Rs2AntibanSettings.naturalMouse = false;
+        startTime = 0;
     }
 }
