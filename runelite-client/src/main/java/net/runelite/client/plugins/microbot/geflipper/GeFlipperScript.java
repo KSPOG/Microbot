@@ -195,7 +195,7 @@ public class GeFlipperScript extends Script {
             int highVol = Rs2GrandExchange.getSellingVolume(itemId);
             int lowVol = Rs2GrandExchange.getBuyingVolume(itemId);
 
-            Integer limit = limits.fetchLimit(itemId);
+            Integer limit = limits.fetchLimit(itemId, itemName);
             if (highVol < MIN_VOLUME || lowVol < MIN_VOLUME) {
                 Microbot.log(itemName + " volume too low, skipping");
                 Microbot.status = "Low volume";
@@ -321,5 +321,6 @@ public class GeFlipperScript extends Script {
         marginChecked.clear();
         margins.clear();
     }
+
 
 }
