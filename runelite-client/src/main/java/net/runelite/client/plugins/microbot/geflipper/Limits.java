@@ -20,6 +20,10 @@ public class Limits {
 
     private final Map<Integer, Integer> limitCache = new HashMap<>();
 
+    /**
+     * Retrieve the buy limit for an item using its ID. The name is resolved
+     * internally before the Grand Exchange interface is queried.
+     */
     public Integer fetchLimit(int itemId) {
         Integer cached = limitCache.get(itemId);
         if (cached != null) {
