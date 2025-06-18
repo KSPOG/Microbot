@@ -696,6 +696,7 @@ public class Rs2GrandExchange {
 
 
 
+
             return -1;
         }
         return data.get("selling").getAsInt();
@@ -741,7 +742,6 @@ public class Rs2GrandExchange {
             e.printStackTrace();
 
 
-
             return -1;
         }
         return data.get("selling").getAsInt();
@@ -751,6 +751,23 @@ public class Rs2GrandExchange {
     public static int getPrice(int itemId) {
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("overall")) {
+            return -1;
+        }
+        return data.get("overall").getAsInt();
+    }
+
+    public static int getBuyingVolume(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buyingQuantity")) {
+            return -1;
+        }
+        return data.get("buyingQuantity").getAsInt();
+    }
+
+    public static int getSellingVolume(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
             return -1;
         }
         return data.get("overall").getAsInt();
