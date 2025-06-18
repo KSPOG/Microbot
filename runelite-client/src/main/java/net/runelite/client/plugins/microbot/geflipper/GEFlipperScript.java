@@ -54,7 +54,13 @@ public class GEFlipperScript extends Script {
 
     public boolean run(GEFlipperConfig config) {
         Rs2AntibanSettings.naturalMouse = true;
+
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
+
+
+        Rs2GrandExchange.setGeTrackerKey(config.apiKey());
+
+
         startTime = System.currentTimeMillis();
         if (f2pItems.isEmpty())
         {
@@ -89,10 +95,12 @@ public class GEFlipperScript extends Script {
                     int lowPrice = Rs2GrandExchange.getSellPrice(itemId);  // GE selling price
                     int sellVolume = Rs2GrandExchange.getSellingQuantity(itemId);
                     int buyVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
+
                     if (highPrice <= 0 || lowPrice <= 0 || sellVolume < 0 || buyVolume < 0) {
                         status = "API error";
                         continue;
                     }
+
                     int margin = highPrice - lowPrice;
                     if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume())
                         {
@@ -106,6 +114,26 @@ public class GEFlipperScript extends Script {
                     if (Rs2GrandExchange.buyItem(itemName, lowPrice, quantity)) {
                         Rs2GrandExchange.collectToInventory();
                         Rs2GrandExchange.sellItem(itemName, quantity, highPrice);
+
+
+
+                    int buyPrice = Rs2GrandExchange.getOfferPrice(itemId);
+                    int sellPrice = Rs2GrandExchange.getSellPrice(itemId);
+                    int sellVolume = Rs2GrandExchange.getSellingQuantity(itemId);
+                    int buyVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
+                    int margin = sellPrice - buyPrice;
+                    if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume())
+                    {
+                        status = "Low vol/margin";
+                        continue;
+                    }
+                    int quantity = Math.min(gp / buyPrice, 100); // simple calc
+                    if (quantity <= 0)
+                        continue;
+                    status = "Buying " + itemName;
+                    if (Rs2GrandExchange.buyItem(itemName, buyPrice, quantity)) {
+
+
                         profit += margin * quantity;
                         lastFlipped.put(itemName, System.currentTimeMillis());
                         break;
@@ -134,3 +162,9 @@ public class GEFlipperScript extends Script {
         startTime = 0;
     }
 }
+
+
+
+}
+
+
