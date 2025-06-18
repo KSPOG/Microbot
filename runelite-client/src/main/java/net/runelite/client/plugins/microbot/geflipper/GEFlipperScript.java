@@ -60,6 +60,7 @@ public class GEFlipperScript extends Script {
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
+
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
@@ -86,6 +87,7 @@ public class GEFlipperScript extends Script {
                 int gp = Rs2Inventory.count("Coins");
                 for (String itemName : f2pItems) {
                     Pair<GrandExchangeSlots, Integer> slotInfo = Rs2GrandExchange.getAvailableSlot();
+
 
                     var slotInfo = Rs2GrandExchange.getAvailableSlot();
 
@@ -117,12 +119,14 @@ public class GEFlipperScript extends Script {
                     }
 
 
+
                     int margin = highPrice - lowPrice;
                     if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume())
                         {
                             status = "Low vol/margin";
                             continue;
                         }
+
 
                     int quantity = Math.min(gp / lowPrice, 100); // simple calc
                     if (quantity <= 0)
@@ -131,6 +135,7 @@ public class GEFlipperScript extends Script {
                     if (Rs2GrandExchange.buyItem(itemName, lowPrice, quantity)) {
                         Rs2GrandExchange.collectToInventory();
                         Rs2GrandExchange.sellItem(itemName, quantity, highPrice);
+
 
 
 
@@ -158,7 +163,10 @@ public class GEFlipperScript extends Script {
                     }
                 }
             } catch (Exception ex) {
+                Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
+
                 System.out.println(ex.getMessage());
+
             }
         }, 0, 3000, TimeUnit.MILLISECONDS);
         return true;
@@ -183,6 +191,8 @@ public class GEFlipperScript extends Script {
 
 
 
+
 }
+
 
 
