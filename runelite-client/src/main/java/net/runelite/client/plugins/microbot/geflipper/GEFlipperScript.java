@@ -62,6 +62,7 @@ public class GEFlipperScript extends Script {
 
 
 
+
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
@@ -91,7 +92,9 @@ public class GEFlipperScript extends Script {
 
 
 
+
                     var slotInfo = Rs2GrandExchange.getAvailableSlot();
+
 
 
                     if (slotInfo.getLeft() == null || slotInfo.getLeft().ordinal() >= 3) {
@@ -107,14 +110,25 @@ public class GEFlipperScript extends Script {
                     int itemId = itemManager.getItemId(itemName);
                     int highPrice = Rs2GrandExchange.getOfferPrice(itemId); // GE buying price
                     int lowPrice = Rs2GrandExchange.getSellPrice(itemId);  // GE selling price
+
+                    int sellingVolume = Rs2GrandExchange.getSellingQuantity(itemId);
+                    int buyingVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
+                    if (highPrice <= 0 || lowPrice <= 0 || sellingVolume < 0 || buyingVolume < 0) {
+
                     int sellVolume = Rs2GrandExchange.getSellingQuantity(itemId);
                     int buyVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
 
                     if (highPrice <= 0 || lowPrice <= 0 || sellVolume < 0 || buyVolume < 0) {
+
                         status = "API error";
                         continue;
                     }
                     int itemMargin = highPrice - lowPrice;
+                    if (itemMargin < config.minMargin() || sellingVolume < config.minVolume() || buyingVolume < config.minVolume()) {
+                        status = "Low vol/margin";
+                        continue;
+                    }
+
                     if (itemMargin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume()) {
                         status = "Low vol/margin";
                         continue;
@@ -149,6 +163,9 @@ public class GEFlipperScript extends Script {
                         profit += itemMargin * quantity;
 
 
+                        profit += itemMargin * quantity;
+
+
 
 
 
@@ -172,6 +189,7 @@ public class GEFlipperScript extends Script {
 
                         profit += margin * quantity;
 
+
                         lastFlipped.put(itemName, System.currentTimeMillis());
                         break;
                     }
@@ -180,7 +198,9 @@ public class GEFlipperScript extends Script {
                 Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
 
 
+
                 System.out.println(ex.getMessage());
+
 
 
             }
@@ -209,8 +229,8 @@ public class GEFlipperScript extends Script {
 
 
 
-}
 
+}
 
 
 
