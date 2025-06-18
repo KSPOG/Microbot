@@ -696,6 +696,7 @@ public class Rs2GrandExchange {
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("selling")) {
 
+
             return -1;
         }
         return data.get("selling").getAsInt();
@@ -740,6 +741,7 @@ public class Rs2GrandExchange {
         } catch (Exception e) {
             e.printStackTrace();
 
+
             return -1;
         }
         return data.get("selling").getAsInt();
@@ -761,6 +763,12 @@ public class Rs2GrandExchange {
         }
         return data.get("buyingQuantity").getAsInt();
     }
+
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
 
     public static int getSellingQuantity(int itemId) {
         JsonObject data = requestItemData(itemId);
@@ -784,6 +792,7 @@ public class Rs2GrandExchange {
             return data.get("sellingQuantity").getAsInt();
         } catch (Exception e) {
             e.printStackTrace();
+
 
 
             return -1;
