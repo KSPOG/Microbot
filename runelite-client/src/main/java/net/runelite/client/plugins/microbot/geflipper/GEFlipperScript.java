@@ -64,6 +64,7 @@ public class GEFlipperScript extends Script {
 
 
 
+
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
@@ -91,6 +92,7 @@ public class GEFlipperScript extends Script {
                 for (String itemName : f2pItems) {
                     Pair<GrandExchangeSlots, Integer> availableSlot = Rs2GrandExchange.getAvailableSlot();
                     if (availableSlot.getLeft() == null || availableSlot.getLeft().ordinal() >= 3) {
+
                     Pair<GrandExchangeSlots, Integer> slotInfo = Rs2GrandExchange.getAvailableSlot();
 
 
@@ -101,6 +103,7 @@ public class GEFlipperScript extends Script {
 
 
                     if (slotInfo.getLeft() == null || slotInfo.getLeft().ordinal() >= 3) {
+
                         status = "Waiting for slot";
                         break;
                     }
@@ -113,6 +116,11 @@ public class GEFlipperScript extends Script {
                     int itemId = itemManager.getItemId(itemName);
                     int highPrice = Rs2GrandExchange.getOfferPrice(itemId); // GE buying price
                     int lowPrice = Rs2GrandExchange.getSellPrice(itemId);  // GE selling price
+
+                    int sellingVolume = Rs2GrandExchange.getSellingVolume(itemId);
+                    int buyingVolume = Rs2GrandExchange.getBuyingVolume(itemId);
+                    if (highPrice <= 0 || lowPrice <= 0 || sellingVolume < 0 || buyingVolume < 0) {
+
                     int sellingVolume = Rs2GrandExchange.getSellingQuantity(itemId);
                     int buyingVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
                     if (highPrice <= 0 || lowPrice <= 0 || sellingVolume < 0 || buyingVolume < 0) {
@@ -128,6 +136,7 @@ public class GEFlipperScript extends Script {
                     if (highPrice <= 0 || lowPrice <= 0 || sellVolume < 0 || buyVolume < 0) {
 
 
+
                         status = "API error";
                         continue;
                     }
@@ -136,6 +145,7 @@ public class GEFlipperScript extends Script {
                         status = "Low vol/margin";
                         continue;
                     }
+
 
 
                     if (itemMargin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume()) {
@@ -162,6 +172,7 @@ public class GEFlipperScript extends Script {
 
 
 
+
                     int quantity = Math.min(gp / lowPrice, 100); // simple calc
                     if (quantity <= 0)
                         continue;
@@ -169,6 +180,9 @@ public class GEFlipperScript extends Script {
                     if (Rs2GrandExchange.buyItem(itemName, lowPrice, quantity)) {
                         Rs2GrandExchange.collectToInventory();
                         Rs2GrandExchange.sellItem(itemName, quantity, highPrice);
+
+                        profit += itemMargin * quantity;
+
 
                         profit += itemMargin * quantity;
 
@@ -204,6 +218,7 @@ public class GEFlipperScript extends Script {
 
 
 
+
                         lastFlipped.put(itemName, System.currentTimeMillis());
                         break;
                     }
@@ -214,7 +229,9 @@ public class GEFlipperScript extends Script {
 
 
 
+
                 System.out.println(ex.getMessage());
+
 
 
 
@@ -247,7 +264,7 @@ public class GEFlipperScript extends Script {
 
 
 
-}
 
+}
 
 
