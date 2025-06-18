@@ -65,9 +65,9 @@ public class GEFlipperScript extends Script {
 
 
 
-        Rs2GrandExchange.setGeTrackerKey(config.apiKey());
-
-
+                    int currentBuyVolume = Rs2GrandExchange.getBuyingVolume(itemId);
+                    if (highPrice <= 0 || lowPrice <= 0 || sellingVolume < 0 || currentBuyVolume < 0) {
+                    if (itemMargin < config.minMargin() || sellingVolume < config.minVolume() || currentBuyVolume < config.minVolume()) {
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
