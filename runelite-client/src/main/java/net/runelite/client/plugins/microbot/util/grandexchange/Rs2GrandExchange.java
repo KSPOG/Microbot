@@ -47,6 +47,11 @@ public class Rs2GrandExchange {
     public static final int GRAND_EXCHANGE_OFFER_CONTAINER_QTY_1 = 30474265;
     public static final int COLLECT_BUTTON = 30474246;
     private static final String GE_TRACKER_API_URL = "https://www.ge-tracker.com/api/items/";
+    private static String geTrackerKey = "";
+
+    public static void setGeTrackerKey(String key) {
+        geTrackerKey = key == null ? "" : key;
+    }
 
     /**
      * close the grand exchange interface
@@ -158,15 +163,13 @@ public class Rs2GrandExchange {
 
                 setPrice(price);
                 setQuantity(quantity);
-                if(getOfferPrice() == price && getOfferQuantity() == quantity) {
+                if (getOfferPrice() == price && getOfferQuantity() == quantity) {
                     confirm();
                     return true;
-                }
-                else {
-                    buyItem(itemName, searchTerm, price, quantity);
+                } else {
+                    return buyItem(itemName, searchTerm, price, quantity);
                 }
 
-                return true;
             } else {
                 System.out.println("unable to find widget setprice.");
             }
@@ -261,19 +264,17 @@ public class Rs2GrandExchange {
             if (pricePerItemButtonX != null) {
                 setPrice(price);
                 setQuantity(quantity);
-                if(getOfferPrice() == price && getOfferQuantity() == quantity) {
+                if (getOfferPrice() == price && getOfferQuantity() == quantity) {
                     confirm();
                     return true;
+                } else {
+                    return sellItem(itemName, quantity, price);
                 }
-                else {
-                    sellItem(itemName, quantity, price);
-                }
-                return true;
             } else {
                 System.out.println("unable to find widget setprice.");
             }
         } catch (Exception ex) {
-            System.out.println(ex.getMessage());
+            Microbot.logStackTrace("Rs2GrandExchange", ex);
         }
         return false;
     }
@@ -385,7 +386,7 @@ public class Rs2GrandExchange {
                 }
             }
         } catch (Exception ex) {
-            System.out.println(ex.getMessage());
+            Microbot.logStackTrace("Rs2GrandExchange", ex);
         }
         return false;
     }
@@ -411,7 +412,7 @@ public class Rs2GrandExchange {
             collect(collectToBank);
             return isAllSlotsEmpty();
         } catch (Exception ex) {
-            System.out.println(ex.getMessage());
+            Microbot.logStackTrace("Rs2GrandExchange", ex);
             return false;
         }
     }
@@ -455,99 +456,99 @@ public class Rs2GrandExchange {
 
     public static Widget getQuantityButton_Minus() {
 
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(1)).orElse(null);
     }
 
     public static Widget getQuantityButton_Plus() {
 
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(2)).orElse(null);
     }
 
     public static Widget getQuantityButton_1() {
 
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(3)).orElse(null);
     }
 
     public static Widget getQuantityButton_10() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(4)).orElse(null);
     }
 
     public static Widget getQuantityButton_100() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(5)).orElse(null);
     }
 
     public static Widget getQuantityButton_1000() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(6)).orElse(null);
     }
 
     public static Widget getQuantityButton_X() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(7)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_Minus() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(8)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_Plus() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(9)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_Minus_5Percent() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(10)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_GuidePrice() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(11)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_X() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(12)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_Plus5Percent() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(13)).orElse(null);
     }
 
     public static Widget getPricePerItemButton_PlusXPercent() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(15)).orElse(null);
     }
 
     public static Widget getChooseItem() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Optional.ofNullable(parent).map(p -> p.getChild(20)).orElse(null);
     }
 
     public static Widget getConfirm() {
-        var parent = getOfferContainer();
+        Widget parent = getOfferContainer();
 
         return Rs2Widget.findWidget("Confirm", Arrays.stream(parent.getDynamicChildren()).collect(Collectors.toList()), true);
     }
@@ -661,83 +662,62 @@ public class Rs2GrandExchange {
     }
 
 
-    public static int getOfferPrice(int itemId) {
+    private static JsonObject requestItemData(int itemId) {
         HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId));
+        if (!geTrackerKey.isEmpty()) {
+            builder.header("Key", geTrackerKey);
+        }
+        HttpRequest request = builder.build();
         try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
+            String jsonResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
             JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("buying").getAsInt();
+            return parser.parse(new StringReader(jsonResponse)).getAsJsonObject().getAsJsonObject("data");
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static int getOfferPrice(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buying")) {
             return -1;
         }
+        return data.get("buying").getAsInt();
     }
 
     public static int getSellPrice(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("selling").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("selling")) {
             return -1;
         }
+        return data.get("selling").getAsInt();
     }
 
     public static int getPrice(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("overall").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("overall")) {
             return -1;
         }
+        return data.get("overall").getAsInt();
     }
 
-
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("sellingQuantity").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static int getBuyingVolume(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buyingQuantity")) {
             return -1;
         }
+        return data.get("buyingQuantity").getAsInt();
+    }
+
+    public static int getSellingVolume(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+            return -1;
+        }
+        return data.get("sellingQuantity").getAsInt();
     }
 
 
@@ -752,7 +732,7 @@ public class Rs2GrandExchange {
     }
 
     public static void setChatboxValue(int value) {
-        var chatboxInputWidget = Rs2Widget.getWidget(InterfaceID.Chatbox.MES_TEXT2);
+        Widget chatboxInputWidget = Rs2Widget.getWidget(InterfaceID.Chatbox.MES_TEXT2);
         if (chatboxInputWidget == null) return;
         chatboxInputWidget.setText(value + "*");
         Microbot.getClientThread().runOnClientThreadOptional(() -> {
