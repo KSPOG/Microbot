@@ -54,6 +54,7 @@ public class GEFlipperScript extends Script {
 
     public boolean run(GEFlipperConfig config) {
         Rs2AntibanSettings.naturalMouse = true;
+        Rs2GrandExchange.setGeTrackerKey(config.apiKey());
         startTime = System.currentTimeMillis();
         if (f2pItems.isEmpty())
         {
@@ -88,6 +89,10 @@ public class GEFlipperScript extends Script {
                     int lowPrice = Rs2GrandExchange.getSellPrice(itemId);  // GE selling price
                     int sellVolume = Rs2GrandExchange.getSellingQuantity(itemId);
                     int buyVolume = Rs2GrandExchange.getBuyingQuantity(itemId);
+                    if (highPrice <= 0 || lowPrice <= 0 || sellVolume < 0 || buyVolume < 0) {
+                        status = "API error";
+                        continue;
+                    }
                     int margin = highPrice - lowPrice;
                     if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume())
                         {
