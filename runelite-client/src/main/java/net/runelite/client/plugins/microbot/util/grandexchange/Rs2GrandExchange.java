@@ -47,6 +47,11 @@ public class Rs2GrandExchange {
     public static final int GRAND_EXCHANGE_OFFER_CONTAINER_QTY_1 = 30474265;
     public static final int COLLECT_BUTTON = 30474246;
     private static final String GE_TRACKER_API_URL = "https://www.ge-tracker.com/api/items/";
+    private static String geTrackerKey = "";
+
+    public static void setGeTrackerKey(String key) {
+        geTrackerKey = key == null ? "" : key;
+    }
 
     /**
      * close the grand exchange interface
@@ -661,83 +666,62 @@ public class Rs2GrandExchange {
     }
 
 
-    public static int getOfferPrice(int itemId) {
+    private static JsonObject requestItemData(int itemId) {
         HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId));
+        if (!geTrackerKey.isEmpty()) {
+            builder.header("Key", geTrackerKey);
+        }
+        HttpRequest request = builder.build();
         try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
+            String jsonResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
             JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("buying").getAsInt();
+            return parser.parse(new StringReader(jsonResponse)).getAsJsonObject().getAsJsonObject("data");
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static int getOfferPrice(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buying")) {
             return -1;
         }
+        return data.get("buying").getAsInt();
     }
 
     public static int getSellPrice(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("selling").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("selling")) {
             return -1;
         }
+        return data.get("selling").getAsInt();
     }
 
     public static int getPrice(int itemId) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GE_TRACKER_API_URL + itemId))
-                .build();
-
-        try {
-            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("overall").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("overall")) {
             return -1;
         }
+        return data.get("overall").getAsInt();
     }
 
-
-
-            JsonParser parser = new JsonParser();
-            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            JsonObject data = jsonElement.getAsJsonObject("data");
-
-            return data.get("sellingQuantity").getAsInt();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static int getBuyingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buyingQuantity")) {
             return -1;
         }
+        return data.get("buyingQuantity").getAsInt();
+    }
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+            return -1;
+        }
+        return data.get("sellingQuantity").getAsInt();
     }
 
 
