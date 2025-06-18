@@ -691,6 +691,8 @@ public class Rs2GrandExchange {
     public static int getSellPrice(int itemId) {
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("selling")) {
+
+
             return -1;
         }
         return data.get("selling").getAsInt();
@@ -705,6 +707,7 @@ public class Rs2GrandExchange {
     }
 
     public static int getBuyingQuantity(int itemId) {
+
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("buyingQuantity")) {
             return -1;
@@ -715,6 +718,91 @@ public class Rs2GrandExchange {
     public static int getSellingQuantity(int itemId) {
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("sellingQuantity")) {
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId))
+                .build();
+
+        try {
+            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .join();
+
+            JsonParser parser = new JsonParser();
+            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
+            JsonObject data = jsonElement.getAsJsonObject("data");
+
+            return data.get("buyingQuantity").getAsInt();
+        } catch (Exception e) {
+            e.printStackTrace();
+
+
+            return -1;
+        }
+        return data.get("selling").getAsInt();
+    }
+
+
+    public static int getPrice(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("overall")) {
+            return -1;
+        }
+        return data.get("overall").getAsInt();
+    }
+
+
+    public static int getBuyingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buyingQuantity")) {
+            return -1;
+        }
+        return data.get("buyingQuantity").getAsInt();
+    }
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
+    public static int getSellingQuantity(int itemId) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId))
+                .build();
+
+        try {
+            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .join();
+
+            JsonParser parser = new JsonParser();
+            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
+            JsonObject data = jsonElement.getAsJsonObject("data");
+
+            return data.get("sellingQuantity").getAsInt();
+        } catch (Exception e) {
+            e.printStackTrace();
+
+
+    public static int getBuyingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("buyingQuantity")) {
+            return -1;
+        }
+        return data.get("buyingQuantity").getAsInt();
+    }
+
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
             return -1;
         }
         return data.get("sellingQuantity").getAsInt();

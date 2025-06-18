@@ -29,4 +29,5 @@ public interface GEFlipperConfig extends Config {
             position = 3
     )
     default String apiKey() { return ""; }
+
 }
