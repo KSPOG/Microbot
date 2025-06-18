@@ -61,6 +61,7 @@ public class GEFlipperScript extends Script {
 
 
 
+
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
@@ -89,7 +90,9 @@ public class GEFlipperScript extends Script {
                     Pair<GrandExchangeSlots, Integer> slotInfo = Rs2GrandExchange.getAvailableSlot();
 
 
+
                     var slotInfo = Rs2GrandExchange.getAvailableSlot();
+
 
                     if (slotInfo.getLeft() == null || slotInfo.getLeft().ordinal() >= 3) {
                         status = "Waiting for slot";
@@ -111,6 +114,12 @@ public class GEFlipperScript extends Script {
                         status = "API error";
                         continue;
                     }
+                    int itemMargin = highPrice - lowPrice;
+                    if (itemMargin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume()) {
+                        status = "Low vol/margin";
+                        continue;
+                    }
+
 
                     int margin = highPrice - lowPrice;
                     if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume()) {
@@ -128,6 +137,7 @@ public class GEFlipperScript extends Script {
                         }
 
 
+
                     int quantity = Math.min(gp / lowPrice, 100); // simple calc
                     if (quantity <= 0)
                         continue;
@@ -135,6 +145,9 @@ public class GEFlipperScript extends Script {
                     if (Rs2GrandExchange.buyItem(itemName, lowPrice, quantity)) {
                         Rs2GrandExchange.collectToInventory();
                         Rs2GrandExchange.sellItem(itemName, quantity, highPrice);
+
+                        profit += itemMargin * quantity;
+
 
 
 
@@ -158,6 +171,7 @@ public class GEFlipperScript extends Script {
 
 
                         profit += margin * quantity;
+
                         lastFlipped.put(itemName, System.currentTimeMillis());
                         break;
                     }
@@ -165,7 +179,9 @@ public class GEFlipperScript extends Script {
             } catch (Exception ex) {
                 Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
 
+
                 System.out.println(ex.getMessage());
+
 
             }
         }, 0, 3000, TimeUnit.MILLISECONDS);
@@ -192,7 +208,9 @@ public class GEFlipperScript extends Script {
 
 
 
+
 }
+
 
 
 
