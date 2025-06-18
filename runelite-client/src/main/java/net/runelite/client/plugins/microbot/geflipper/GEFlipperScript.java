@@ -5,6 +5,8 @@ import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.grandexchange.Rs2GrandExchange;
+import net.runelite.client.plugins.microbot.util.grandexchange.GrandExchangeSlots;
+import org.apache.commons.lang3.tuple.Pair;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.item.Rs2ItemManager;
 
@@ -54,7 +56,7 @@ public class GEFlipperScript extends Script {
 
     public boolean run(GEFlipperConfig config) {
         Rs2AntibanSettings.naturalMouse = true;
-
+                    Pair<GrandExchangeSlots, Integer> slotInfo = Rs2GrandExchange.getAvailableSlot();
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
