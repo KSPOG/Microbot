@@ -5,6 +5,9 @@ import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.grandexchange.Rs2GrandExchange;
+import net.runelite.client.plugins.microbot.util.grandexchange.GrandExchangeSlots;
+import org.apache.commons.lang3.tuple.Pair;
+
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.item.Rs2ItemManager;
 
@@ -54,11 +57,14 @@ public class GEFlipperScript extends Script {
 
     public boolean run(GEFlipperConfig config) {
         Rs2AntibanSettings.naturalMouse = true;
-
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
 
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
+
+
+        Rs2GrandExchange.setGeTrackerKey(config.apiKey());
+
 
 
         startTime = System.currentTimeMillis();
@@ -79,7 +85,10 @@ public class GEFlipperScript extends Script {
                 }
                 int gp = Rs2Inventory.count("Coins");
                 for (String itemName : f2pItems) {
+                    Pair<GrandExchangeSlots, Integer> slotInfo = Rs2GrandExchange.getAvailableSlot();
+
                     var slotInfo = Rs2GrandExchange.getAvailableSlot();
+
                     if (slotInfo.getLeft() == null || slotInfo.getLeft().ordinal() >= 3) {
                         status = "Waiting for slot";
                         break;
@@ -102,11 +111,19 @@ public class GEFlipperScript extends Script {
                     }
 
                     int margin = highPrice - lowPrice;
+                    if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume()) {
+                        status = "Low vol/margin";
+                        continue;
+                    }
+
+
+                    int margin = highPrice - lowPrice;
                     if (margin < config.minMargin() || sellVolume < config.minVolume() || buyVolume < config.minVolume())
                         {
                             status = "Low vol/margin";
                             continue;
                         }
+
                     int quantity = Math.min(gp / lowPrice, 100); // simple calc
                     if (quantity <= 0)
                         continue;
@@ -114,6 +131,7 @@ public class GEFlipperScript extends Script {
                     if (Rs2GrandExchange.buyItem(itemName, lowPrice, quantity)) {
                         Rs2GrandExchange.collectToInventory();
                         Rs2GrandExchange.sellItem(itemName, quantity, highPrice);
+
 
 
 

@@ -22,7 +22,6 @@ public interface GEFlipperConfig extends Config {
     )
     default int minMargin() { return 10; }
 
-
     @ConfigItem(
             keyName = "apiKey",
             name = "GE Tracker API Key",

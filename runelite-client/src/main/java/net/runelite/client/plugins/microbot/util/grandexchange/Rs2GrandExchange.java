@@ -163,15 +163,13 @@ public class Rs2GrandExchange {
 
                 setPrice(price);
                 setQuantity(quantity);
-                if(getOfferPrice() == price && getOfferQuantity() == quantity) {
+                if (getOfferPrice() == price && getOfferQuantity() == quantity) {
                     confirm();
                     return true;
-                }
-                else {
-                    buyItem(itemName, searchTerm, price, quantity);
+                } else {
+                    return buyItem(itemName, searchTerm, price, quantity);
                 }
 
-                return true;
             } else {
                 System.out.println("unable to find widget setprice.");
             }
@@ -266,14 +264,12 @@ public class Rs2GrandExchange {
             if (pricePerItemButtonX != null) {
                 setPrice(price);
                 setQuantity(quantity);
-                if(getOfferPrice() == price && getOfferQuantity() == quantity) {
+                if (getOfferPrice() == price && getOfferQuantity() == quantity) {
                     confirm();
                     return true;
+                } else {
+                    return sellItem(itemName, quantity, price);
                 }
-                else {
-                    sellItem(itemName, quantity, price);
-                }
-                return true;
             } else {
                 System.out.println("unable to find widget setprice.");
             }
@@ -766,6 +762,11 @@ public class Rs2GrandExchange {
         JsonObject data = requestItemData(itemId);
         if (data == null || !data.has("sellingQuantity")) {
 
+
+    public static int getSellingQuantity(int itemId) {
+        JsonObject data = requestItemData(itemId);
+        if (data == null || !data.has("sellingQuantity")) {
+
     public static int getSellingQuantity(int itemId) {
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
@@ -784,6 +785,7 @@ public class Rs2GrandExchange {
             return data.get("sellingQuantity").getAsInt();
         } catch (Exception e) {
             e.printStackTrace();
+
 
 
             return -1;
