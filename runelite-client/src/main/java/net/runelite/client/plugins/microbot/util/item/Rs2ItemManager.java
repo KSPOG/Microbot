@@ -32,8 +32,8 @@ public class Rs2ItemManager {
 
     // get item id by name
     public int getItemId(String itemName) {
-        var items =searchItem(itemName);
-        return items.get(0).getId();
+        List<ItemPrice> items = searchItem(itemName);
+        return items.isEmpty() ? -1 : items.get(0).getId();
     }
 
     public ItemComposition getItemComposition(int itemId) {
