@@ -57,11 +57,8 @@ public class GEFlipperScript extends Script {
 
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
 
-        Rs2GrandExchange.setGeTrackerKey(config.apiKey());
-
 
         Rs2GrandExchange.setGeTrackerKey(config.apiKey());
-
 
 
         startTime = System.currentTimeMillis();
@@ -120,7 +117,6 @@ public class GEFlipperScript extends Script {
 
 
 
-
                     int buyPrice = Rs2GrandExchange.getOfferPrice(itemId);
                     int sellPrice = Rs2GrandExchange.getSellPrice(itemId);
                     int sellVolume = Rs2GrandExchange.getSellingQuantity(itemId);
@@ -169,8 +165,6 @@ public class GEFlipperScript extends Script {
 
 
 
-
 }
-
 
 
