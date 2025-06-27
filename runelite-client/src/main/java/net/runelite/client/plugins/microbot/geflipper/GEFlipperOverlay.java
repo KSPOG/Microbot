@@ -24,6 +24,7 @@ public class GEFlipperOverlay extends OverlayPanel {
     public Dimension render(Graphics2D graphics) {
         try {
             panelComponent.getChildren().clear();
+
             panelComponent.setPreferredSize(new Dimension(200, 300));
             panelComponent.getChildren().add(TitleComponent.builder()
                     .text("GE Flipper " + GEFlipperScript.VERSION)

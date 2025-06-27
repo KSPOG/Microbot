@@ -30,6 +30,10 @@ public class GEFlipperScript extends Script {
 
     private final List<Offer> offers = new ArrayList<>();
     private int startingGp;
+    public static int margin = 0;
+    public static int buyPrice = 0;
+    public static int sellPrice = 0;
+
 
     private long startTime;
     private final Rs2ItemManager itemManager = new Rs2ItemManager();
@@ -87,6 +91,20 @@ public class GEFlipperScript extends Script {
                         break;
                     case WAIT_BUY:
                         if (Rs2GrandExchange.hasFinishedBuyingOffers()) {
+
+                String itemName = config.itemName();
+                int itemId = itemManager.getItemId(itemName);
+                buyPrice = Rs2GrandExchange.getOfferPrice(itemId);
+                sellPrice = Rs2GrandExchange.getSellPrice(itemId);
+                margin = sellPrice - buyPrice;
+
+                switch (state) {
+                    case BUY:
+                        Rs2GrandExchange.buyItem(itemName, buyPrice, 1);
+                        state = State.WAIT_BUY;
+                        break;
+                    case WAIT_BUY:
+                        if (Rs2GrandExchange.hasBoughtOffer()) {
                             Rs2GrandExchange.collect(false);
                             state = State.SELL;
                         }
@@ -109,6 +127,23 @@ public class GEFlipperScript extends Script {
                 }
 
                 profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
+
+                        Rs2GrandExchange.sellItem(itemName, 1, sellPrice);
+                        state = State.WAIT_SELL;
+                        break;
+                    case WAIT_SELL:
+                        if (Rs2GrandExchange.hasSoldOffer()) {
+                            Rs2GrandExchange.collect(true);
+                            profit += margin;
+
+                            state = State.BUY;
+                        }
+                        break;
+                }
+
+
+                profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
+                    
                 long elapsed = System.currentTimeMillis() - startTime;
                 profitPerHour = (int) (profit / (elapsed / 3600000.0));
 
@@ -131,6 +166,8 @@ public class GEFlipperScript extends Script {
         if (currentIndex >= items.size()) {
             currentIndex = 0;
         }
+        margin = 0;
+
     }
 
     public List<String> getTradeableF2PItems() {

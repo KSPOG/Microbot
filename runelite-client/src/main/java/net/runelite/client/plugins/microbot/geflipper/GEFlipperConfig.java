@@ -13,4 +13,13 @@ public interface GEFlipperConfig extends Config {
             position = 1
     )
     default int minMargin() { return 10; }
+
+   @ConfigItem(
+            keyName = "itemName",
+            name = "Item Name",
+            description = "Item to flip",
+            position = 2
+    )
+    default String itemName() { return "Air rune"; }
+
 }
