@@ -36,6 +36,9 @@ public class GEFlipperScript extends Script {
 
                 String itemName = config.itemName();
                 int itemId = itemManager.getItemId(itemName);
+                if (itemId <= 0) {
+                    return;
+                }
                 buyPrice = Rs2GrandExchange.getOfferPrice(itemId);
                 sellPrice = Rs2GrandExchange.getSellPrice(itemId);
                 margin = sellPrice - buyPrice;
