@@ -2,11 +2,14 @@ package net.runelite.client.plugins.microbot.geflipper;
 
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemID;
+
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.util.grandexchange.Rs2GrandExchange;
 import net.runelite.client.plugins.microbot.util.item.Rs2ItemManager;
+
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +40,11 @@ public class GEFlipperScript extends Script {
     private GEFlipperConfig config;
     private List<String> items = new ArrayList<>();
     private int currentIndex = 0;
+
+    private long startTime;
+    private final Rs2ItemManager itemManager = new Rs2ItemManager();
+    private GEFlipperConfig config;
+
 
     private enum State {BUY, WAIT_BUY, SELL, WAIT_SELL}
     private State state = State.BUY;
@@ -87,6 +95,21 @@ public class GEFlipperScript extends Script {
                         break;
                     case WAIT_BUY:
                         if (Rs2GrandExchange.hasFinishedBuyingOffers()) {
+
+                String itemName = config.itemName();
+                int itemId = itemManager.getItemId(itemName);
+                buyPrice = Rs2GrandExchange.getOfferPrice(itemId);
+                sellPrice = Rs2GrandExchange.getSellPrice(itemId);
+                margin = sellPrice - buyPrice;
+
+                switch (state) {
+                    case BUY:
+                        Rs2GrandExchange.buyItem(itemName, buyPrice, 1);
+                        state = State.WAIT_BUY;
+                        break;
+                    case WAIT_BUY:
+                        if (Rs2GrandExchange.hasBoughtOffer()) {
+
                             Rs2GrandExchange.collect(false);
                             state = State.SELL;
                         }
@@ -101,12 +124,23 @@ public class GEFlipperScript extends Script {
                         if (Rs2GrandExchange.hasFinishedSellingOffers()) {
                             Rs2GrandExchange.collect(true);
                             offers.clear();
+
+                        Rs2GrandExchange.sellItem(itemName, 1, sellPrice);
+                        state = State.WAIT_SELL;
+                        break;
+                    case WAIT_SELL:
+                        if (Rs2GrandExchange.hasSoldOffer()) {
+                            Rs2GrandExchange.collect(true);
+                            profit += margin;
+
                             state = State.BUY;
                         }
                         break;
                 }
 
+
                 profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
+
                 long elapsed = System.currentTimeMillis() - startTime;
                 profitPerHour = (int) (profit / (elapsed / 3600000.0));
 
@@ -131,6 +165,7 @@ public class GEFlipperScript extends Script {
             currentIndex = 0;
         }
     }
+
 
     public List<String> getTradeableF2PItems() {
         List<String> items = new ArrayList<>();
