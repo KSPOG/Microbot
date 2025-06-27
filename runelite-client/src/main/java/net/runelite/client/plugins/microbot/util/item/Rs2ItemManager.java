@@ -32,7 +32,10 @@ public class Rs2ItemManager {
 
     // get item id by name
     public int getItemId(String itemName) {
-        var items =searchItem(itemName);
+        var items = searchItem(itemName);
+        if (items.isEmpty()) {
+            return -1;
+        }
         return items.get(0).getId();
     }
 
