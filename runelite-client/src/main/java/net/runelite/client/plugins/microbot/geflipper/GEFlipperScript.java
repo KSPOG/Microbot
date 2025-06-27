@@ -86,8 +86,9 @@ public class GEFlipperScript extends Script {
         List<String> items = new ArrayList<>();
         int count = Microbot.getClient().getItemCount();
         for (int id = 0; id < count; id++) {
+            final int itemId = id;
             ItemComposition comp = Microbot.getClientThread().runOnClientThreadOptional(() ->
-                    Microbot.getItemManager().getItemComposition(id)).orElse(null);
+                    Microbot.getItemManager().getItemComposition(itemId)).orElse(null);
             if (comp != null && comp.isTradeable() && !comp.isMembers()) {
                 items.add(comp.getName());
             }
