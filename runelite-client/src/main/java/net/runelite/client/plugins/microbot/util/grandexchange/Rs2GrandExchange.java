@@ -18,6 +18,7 @@ import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2ItemModel;
 import net.runelite.client.plugins.microbot.util.keyboard.Rs2Keyboard;
 import net.runelite.client.plugins.microbot.util.menu.NewMenuEntry;
+import net.runelite.client.plugins.microbot.util.misc.NumberExtractor;
 import net.runelite.client.plugins.microbot.util.npc.Rs2Npc;
 import net.runelite.client.plugins.microbot.util.npc.Rs2NpcModel;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
@@ -35,6 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static net.runelite.client.plugins.microbot.util.Global.*;
 
@@ -103,7 +105,7 @@ public class Rs2GrandExchange {
             if (npc == null) return false;
             Rs2Npc.interact(npc, "exchange");
             sleepUntil(Rs2GrandExchange::isOpen, 5000);
-            return isOpen();
+            return false;
         } catch (Exception ex) {
             Microbot.logStackTrace("Rs2GrandExchange", ex);
         }
@@ -212,6 +214,87 @@ public class Rs2GrandExchange {
 
     }
 
+    public static boolean buyItemAbove5Percent(String itemName, int quantity) {
+        return buyItemAbove5Percent(itemName, quantity, 1);
+    }
+
+    private static boolean searchItemAndSetQuantity(String itemName, int quantity) {
+        if (!isOpen()) {
+            openExchange();
+        }
+        Pair<GrandExchangeSlots, Integer> slot = getAvailableSlot();
+        Widget buyOffer = getOfferBuyButton(slot.getLeft());
+
+        if (buyOffer == null) return false;
+
+        Microbot.getMouse().click(buyOffer.getBounds());
+        sleepUntil(Rs2GrandExchange::isOfferTextVisible);
+        sleepUntil(() -> Rs2Widget.hasWidget("What would you like to buy?"));
+        if (Rs2Widget.hasWidget("What would you like to buy?"))
+            Rs2Keyboard.typeString(itemName);
+        sleepUntil(() -> Rs2Widget.hasWidget(itemName) || Rs2Widget.hasWidget("No matches found.")); //GE Search Results
+        sleep(1200, 1600);
+        if (Rs2Widget.hasWidget("No matches found.")) {
+            System.out.println("Unable to find item in GE.");
+            return false;
+        }
+        Pair<Widget, Integer> itemResult = getSearchResultWidget(itemName);
+        if (itemResult != null) {
+            Rs2Widget.clickWidgetFast(itemResult.getLeft(), itemResult.getRight(), 1);
+            sleepUntil(() -> !Rs2Widget.hasWidget("Choose an item..."));
+            sleep(600, 1600);
+        }
+        setQuantity(quantity);
+
+        return true;
+    }
+
+    /**
+     * Buys item from the grand exchange and increases the price by custom percent
+     *
+     * @param itemName
+     * @param quantity
+     * @param percent the percentage to increase
+     * @return
+     */
+    public static boolean buyItemAboveXPercent(String itemName, int quantity, int percent) {
+        try {
+            if (!searchItemAndSetQuantity(itemName, quantity))
+                return false;
+
+            Widget pricePerItemButtonXPercent = getPricePerItemButton_PlusXPercent();
+            if (pricePerItemButtonXPercent != null) {
+                int basePrice = Microbot.getVarbitValue(VarbitID.GE_NEWOFFER_TYPE);
+                int currentPercent = NumberExtractor.extractNumber(pricePerItemButtonXPercent.getText());
+
+                // Update Price per item custom percentage if it doesn't match
+                if (currentPercent != percent) {
+                    // If current percentage is empty (indicated by +X%)
+                    if (currentPercent == -1) {
+                        Microbot.getMouse().click(pricePerItemButtonXPercent.getBounds());
+                    } else {
+                        Microbot.doInvoke(new NewMenuEntry("Customise", 15, pricePerItemButtonXPercent.getId(), MenuAction.CC_OP.getId(), 2, -1, ""), new Rectangle(pricePerItemButtonXPercent.getBounds()));
+                    }
+                    sleep(300, 1200);
+                    sleepUntil(() -> Rs2Widget.hasWidget("Set a percentage to decrease/increase"), 2000);
+                    Rs2Keyboard.typeString(Integer.toString(percent));
+                    Rs2Keyboard.enter();
+                    sleepUntil(() -> currentPercent == NumberExtractor.extractNumber(pricePerItemButtonXPercent.getText()), 2000);
+                    sleep(300, 1200);
+                }
+
+                Microbot.getMouse().click(pricePerItemButtonXPercent.getBounds());
+                sleepUntil(() -> hasOfferPriceChanged(basePrice), 2000);
+
+                confirm();
+                return true;
+            }
+
+        } catch (Exception ex) {
+            Microbot.logStackTrace("Rs2GrandExchange", ex);
+        }
+        return false;
+    }
 
     /**
      * Buys item from the grand exchange 5% above the average price
@@ -221,6 +304,38 @@ public class Rs2GrandExchange {
      * @param timesToIncreasePrice the amount to click +5% price increase
      * @return
      */
+    public static boolean buyItemAbove5Percent(String itemName, int quantity, int timesToIncreasePrice) {
+        try {
+            if (!searchItemAndSetQuantity(itemName, quantity))
+                return false;
+
+            if (buyItemAbove5Percent(timesToIncreasePrice)) {
+                return true;
+            }
+
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+        return false;
+    }
+
+    private static boolean buyItemAbove5Percent(int timesToIncreasePrice) {
+        Widget pricePerItemButton5Percent = getPricePerItemButton_Plus5Percent();
+        if (pricePerItemButton5Percent != null) {
+            int basePrice = Microbot.getVarbitValue(VarbitID.GE_NEWOFFER_TYPE);
+            // Call click() as many times as the value of count
+            IntStream.range(0, timesToIncreasePrice).forEach(i -> {
+                Microbot.getMouse().click(pricePerItemButton5Percent.getBounds());
+                sleepUntil(() -> hasOfferPriceChanged(basePrice), 1600);
+            });
+
+            confirm();
+            return true;
+        } else {
+            System.out.println("unable to find widget setprice.");
+            return false;
+        }
+    }
 
     private static boolean useGrandExchange() {
         if (!isOpen()) {
@@ -278,6 +393,41 @@ public class Rs2GrandExchange {
         return false;
     }
 
+    public static boolean sellItemUnder5Percent(String itemName) {
+        return sellItemUnder5Percent(itemName, false);
+    }
+
+    public static boolean sellItemUnder5Percent(String itemName, boolean exact) {
+        try {
+            if (!Rs2Inventory.hasItem(itemName)) return false;
+
+            if (!isOpen()) {
+                openExchange();
+            }
+            Pair<GrandExchangeSlots, Integer> slot = getAvailableSlot();
+            Widget sellOffer = getOfferSellButton(slot.getLeft());
+
+            if (sellOffer == null) return false;
+
+            Microbot.getMouse().click(sellOffer.getBounds());
+            sleepUntil(Rs2GrandExchange::isOfferTextVisible, 5000);
+            Rs2Inventory.interact(itemName, "Offer", exact);
+            sleepUntil(() -> Rs2Widget.hasWidget("actively traded price"));
+            sleep(300, 600);
+            Widget pricePerItemButton5Percent = getPricePerItemButton_Minus_5Percent();
+            if (pricePerItemButton5Percent != null) {
+                Microbot.getMouse().click(pricePerItemButton5Percent.getBounds());
+                Microbot.getMouse().click(getConfirm().getBounds());
+                sleepUntil(() -> !isOfferTextVisible());
+                return true;
+            } else {
+                System.out.println("unable to find widget setprice.");
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+        return false;
+    }
 
     /**
      * Collect all the grand exchange slots to the bank or inventory
@@ -355,8 +505,7 @@ public class Rs2GrandExchange {
                 sleep(600);
             }
 
-            int price = getOfferPrice(item.getId());
-            sellItem(item.getName(), item.getQuantity(), price);
+            Rs2GrandExchange.sellItemUnder5Percent(item.getName());
         }
         return Rs2Inventory.isEmpty();
     }
@@ -727,7 +876,38 @@ public class Rs2GrandExchange {
         }
     }
 
+    public static int getBuyingVolume(int itemId) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId))
+                .build();
 
+        try {
+            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .join();
+
+            JsonParser parser = new JsonParser();
+            JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
+            JsonObject data = jsonElement.getAsJsonObject("data");
+
+            return data.get("buyingQuantity").getAsInt();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public static int getSellingVolume(int itemId) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(GE_TRACKER_API_URL + itemId))
+                .build();
+
+        try {
+            String jsonResponse = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .join();
 
             JsonParser parser = new JsonParser();
             JsonObject jsonElement = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
@@ -739,9 +919,6 @@ public class Rs2GrandExchange {
             return -1;
         }
     }
-
-
-
 
     static int getOfferQuantity() {
         return Microbot.getVarbitValue(4396);
@@ -762,4 +939,3 @@ public class Rs2GrandExchange {
 
     }
 }
-
