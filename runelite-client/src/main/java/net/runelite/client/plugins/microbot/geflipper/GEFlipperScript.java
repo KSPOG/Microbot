@@ -104,6 +104,8 @@ public class GEFlipperScript extends Script {
                             state = State.BUY;
                         }
                         break;
+                    default:
+                        break;
                 }
 
                 profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
