@@ -49,6 +49,13 @@ public class GEFlipperScript extends Script {
 
 
     public boolean run(GEFlipperConfig config) {
+        if (isRunning()) {
+            shutdown();
+        }
+        offers.clear();
+        itemQueue.clear();
+        lastTrade.clear();
+
         this.config = config;
         final GEFlipperConfig conf = this.config;
         Rs2Antiban.resetAntibanSettings();
@@ -176,6 +183,9 @@ public class GEFlipperScript extends Script {
     public void shutdown() {
         super.shutdown();
         Rs2Antiban.resetAntibanSettings();
+        offers.clear();
+        itemQueue.clear();
+        lastTrade.clear();
         profit = 0;
         profitPerHour = 0;
         status = "Stopped";
