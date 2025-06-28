@@ -21,4 +21,12 @@ public interface GEFlipperConfig extends Config {
             position = 2
     )
     default int minVolume() { return 1000; }
+
+    @ConfigItem(
+            keyName = "delay",
+            name = "Loop Delay (ms)",
+            description = "Delay between flip checks",
+            position = 3
+    )
+    default int delay() { return 1000; }
 }
