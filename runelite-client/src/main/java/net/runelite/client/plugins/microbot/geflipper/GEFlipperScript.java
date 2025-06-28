@@ -102,6 +102,13 @@ public class GEFlipperScript extends Script {
                         status = "Margin too low";
                         continue;
                     }
+                    int buyVol = Rs2GrandExchange.getBuyingVolume(id);
+                    int sellVol = Rs2GrandExchange.getSellingVolume(id);
+                    int volume = Math.min(buyVol, sellVol);
+                    if (volume > 0 && volume < conf.minVolume()) {
+                        status = "Volume too low";
+                        continue;
+                    }
                     int coins = Rs2Inventory.itemQuantity(ItemID.COINS_995);
                     if (coins < buyPrice) {
                         status = "Not enough gp";

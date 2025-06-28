@@ -13,4 +13,12 @@ public interface GEFlipperConfig extends Config {
             position = 1
     )
     default int minMargin() { return 10; }
+
+    @ConfigItem(
+            keyName = "minVolume",
+            name = "Minimum Volume",
+            description = "Skip items with daily volume below this value",
+            position = 2
+    )
+    default int minVolume() { return 1000; }
 }
