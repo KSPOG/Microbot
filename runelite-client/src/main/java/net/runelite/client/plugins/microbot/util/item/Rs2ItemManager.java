@@ -26,13 +26,17 @@ public class Rs2ItemManager {
         if (query == null || query.trim().isEmpty()) {
             return Collections.emptyList();
         }
-        String lowerQuery = query.toLowerCase();
-        return Microbot.getClientThread().runOnClientThreadOptional(() -> Microbot.getItemManager().search(query)).orElse(Collections.emptyList());
+        return Microbot.getClientThread().runOnClientThreadOptional(
+                () -> Microbot.getItemManager().search(query)
+        ).orElse(Collections.emptyList());
     }
 
     // get item id by name
     public int getItemId(String itemName) {
-        var items =searchItem(itemName);
+        var items = searchItem(itemName);
+        if (items.isEmpty()) {
+            return -1;
+        }
         return items.get(0).getId();
     }
 
