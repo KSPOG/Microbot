@@ -141,6 +141,7 @@ public class GEFlipperScript extends Script {
                     status = "Waiting";
                 }
                 int attempts = 0;
+                boolean placedSomething = false;
                 while (offers.size() < MAX_SLOTS && attempts < items.size()) {
                     attempts++;
                     String name = nextItem();
@@ -163,6 +164,7 @@ public class GEFlipperScript extends Script {
                     if (margin < conf.minMargin()) {
                         status = "Margin too low";
                         itemQueue.add(name);
+                        lastTrade.put(name, System.currentTimeMillis());
                         continue;
                     }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
@@ -202,6 +204,7 @@ public class GEFlipperScript extends Script {
                         status = "Unable to buy";
                         break;
                     }
+                    placedSomething = true;
                     lastTrade.put(name, System.currentTimeMillis());
                     Offer offer = new Offer();
                     offer.name = name;
@@ -211,6 +214,9 @@ public class GEFlipperScript extends Script {
                     offer.selling = false;
                     offer.placedTime = System.currentTimeMillis();
                     offers.add(offer);
+                }
+                if (!placedSomething) {
+                    status = "Waiting";
                 }
 
                 long elapsed = System.currentTimeMillis() - startTime;
