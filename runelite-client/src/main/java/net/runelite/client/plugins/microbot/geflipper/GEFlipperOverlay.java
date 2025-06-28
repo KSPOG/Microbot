@@ -6,6 +6,7 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 import java.text.NumberFormat;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import java.awt.*;
@@ -48,9 +49,22 @@ public class GEFlipperOverlay extends OverlayPanel {
                     .right(fmt.format(GEFlipperScript.profitPerHour))
                     .build());
 
+            long runtime = System.currentTimeMillis() - GEFlipperScript.startTime;
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Time Running:")
+                    .right(formatDuration(runtime))
+                    .build());
+
         } catch (Exception ex) {
             Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
         }
         return super.render(graphics);
+    }
+
+    private String formatDuration(long millis) {
+        long hours = TimeUnit.MILLISECONDS.toHours(millis);
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60;
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60;
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 }

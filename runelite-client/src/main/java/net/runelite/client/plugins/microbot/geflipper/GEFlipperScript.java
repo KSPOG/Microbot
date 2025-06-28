@@ -44,7 +44,7 @@ public class GEFlipperScript extends Script {
     private final Map<String, Long> lastTrade = new HashMap<>();
     private int startingGp;
 
-    private long startTime;
+    public static long startTime;
     private final Rs2ItemManager itemManager = new Rs2ItemManager();
     private GEFlipperConfig config;
     private List<String> items = new ArrayList<>();
