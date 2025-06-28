@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
@@ -25,6 +27,7 @@ public class GEFlipperScript extends Script {
     public static String status = "";
 
     private static final int MAX_SLOTS = 3;
+    private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
 
     private static class Offer {
         String name;
@@ -36,6 +39,7 @@ public class GEFlipperScript extends Script {
 
     private final List<Offer> offers = new ArrayList<>();
     private final Queue<String> itemQueue = new LinkedList<>();
+    private final Map<String, Long> lastTrade = new HashMap<>();
     private int startingGp;
 
     private long startTime;
@@ -102,6 +106,10 @@ public class GEFlipperScript extends Script {
                 }
                 while (offers.size() < MAX_SLOTS) {
                     String name = nextItem();
+                    if (name == null) {
+                        status = "All items on cooldown";
+                        break;
+                    }
                     int id = itemManager.getItemId(name);
                     if (id <= 0) {
                         status = "Item not found";
@@ -143,6 +151,7 @@ public class GEFlipperScript extends Script {
                         status = "Unable to buy";
                         break;
                     }
+                    lastTrade.put(name, System.currentTimeMillis());
                     Offer offer = new Offer();
                     offer.name = name;
                     offer.buyPrice = buyPrice;
@@ -173,10 +182,23 @@ public class GEFlipperScript extends Script {
     }
 
     private String nextItem() {
-        if (itemQueue.isEmpty()) {
-            itemQueue.addAll(items);
+        if (items.isEmpty()) {
+            return null;
         }
-        return itemQueue.poll();
+        int attempts = 0;
+        long now = System.currentTimeMillis();
+        while (attempts < items.size()) {
+            if (itemQueue.isEmpty()) {
+                itemQueue.addAll(items);
+            }
+            String name = itemQueue.poll();
+            Long last = lastTrade.get(name);
+            if (last == null || now - last >= TRADE_COOLDOWN) {
+                return name;
+            }
+            attempts++;
+        }
+        return null;
     }
 
     public List<String> getTradeableF2PItems() {
