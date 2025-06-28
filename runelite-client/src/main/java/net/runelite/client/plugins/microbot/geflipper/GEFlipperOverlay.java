@@ -34,6 +34,11 @@ public class GEFlipperOverlay extends OverlayPanel {
             NumberFormat fmt = NumberFormat.getIntegerInstance();
 
             panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Status:")
+                    .right(GEFlipperScript.status)
+                    .build());
+
+            panelComponent.getChildren().add(LineComponent.builder()
                     .left("Profit:")
                     .right(fmt.format(GEFlipperScript.profit))
                     .build());
