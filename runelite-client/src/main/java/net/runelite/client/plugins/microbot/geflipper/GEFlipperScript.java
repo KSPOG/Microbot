@@ -28,6 +28,7 @@ public class GEFlipperScript extends Script {
 
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
+    private static final long BUY_TIMEOUT = 25 * 60 * 1000L; // 25 minutes
 
     private static class Offer {
         String name;
@@ -35,6 +36,7 @@ public class GEFlipperScript extends Script {
         int sellPrice;
         int quantity;
         boolean selling;
+        long placedTime;
     }
 
     private final List<Offer> offers = new ArrayList<>();
@@ -93,6 +95,19 @@ public class GEFlipperScript extends Script {
                 if (Rs2GrandExchange.hasSoldOffer()) {
                     status = "Collecting";
                     Rs2GrandExchange.collect(true);
+                }
+
+                // cancel stale buy offers
+                for (Offer o : new ArrayList<>(offers)) {
+                    if (!o.selling && !Rs2Inventory.hasItem(o.name)) {
+                        if (System.currentTimeMillis() - o.placedTime > BUY_TIMEOUT) {
+                            status = "Cancelling";
+                            Rs2GrandExchange.abortOffer(o.name, false);
+                            offers.remove(o);
+                            itemQueue.add(o.name);
+                            lastTrade.remove(o.name);
+                        }
+                    }
                 }
 
                 // place sell offers for bought items
@@ -165,6 +180,7 @@ public class GEFlipperScript extends Script {
                     offer.sellPrice = sellPrice;
                     offer.quantity = quantity;
                     offer.selling = false;
+                    offer.placedTime = System.currentTimeMillis();
                     offers.add(offer);
                 }
 
