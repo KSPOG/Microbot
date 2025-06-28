@@ -28,7 +28,7 @@ public class GEFlipperScript extends Script {
 
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
-    private static final long BUY_TIMEOUT = 25 * 60 * 1000L; // 25 minutes
+    private long buyTimeoutMs = 25 * 60 * 1000L;
 
     private static class Offer {
         String name;
@@ -60,6 +60,7 @@ public class GEFlipperScript extends Script {
 
         this.config = config;
         final GEFlipperConfig conf = this.config;
+        buyTimeoutMs = conf.cancelMinutes() * 60L * 1000L;
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
         status = "Starting";
@@ -100,7 +101,7 @@ public class GEFlipperScript extends Script {
                 // cancel stale buy offers
                 for (Offer o : new ArrayList<>(offers)) {
                     if (!o.selling && !Rs2Inventory.hasItem(o.name)) {
-                        if (System.currentTimeMillis() - o.placedTime > BUY_TIMEOUT) {
+                        if (System.currentTimeMillis() - o.placedTime > buyTimeoutMs) {
                             status = "Cancelling";
                             Rs2GrandExchange.abortOffer(o.name, false);
                             offers.remove(o);

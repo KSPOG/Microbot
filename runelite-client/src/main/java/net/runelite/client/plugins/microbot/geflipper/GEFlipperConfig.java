@@ -29,4 +29,12 @@ public interface GEFlipperConfig extends Config {
             position = 3
     )
     default int delay() { return 1000; }
+
+    @ConfigItem(
+            keyName = "cancelMinutes",
+            name = "Cancel Offer Minutes",
+            description = "Cancel buy offers after this many minutes",
+            position = 4
+    )
+    default int cancelMinutes() { return 25; }
 }
