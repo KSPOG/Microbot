@@ -64,7 +64,12 @@ public class GEFlipperScript extends Script {
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
         status = "Starting";
-        items = getTradeableF2PItems();
+        if (conf.itemName() != null && !conf.itemName().trim().isEmpty()) {
+            items = new ArrayList<>();
+            items.add(conf.itemName().trim());
+        } else {
+            items = getTradeableF2PItems();
+        }
         itemQueue.clear();
         itemQueue.addAll(items);
         startingGp = Rs2Inventory.itemQuantity(ItemID.COINS_995);

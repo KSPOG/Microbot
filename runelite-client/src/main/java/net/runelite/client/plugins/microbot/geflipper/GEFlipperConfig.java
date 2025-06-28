@@ -7,6 +7,14 @@ import net.runelite.client.config.ConfigItem;
 @ConfigGroup("geflipper")
 public interface GEFlipperConfig extends Config {
     @ConfigItem(
+            keyName = "itemName",
+            name = "Item Name",
+            description = "Name of the item to flip. Leave blank for all F2P tradeables",
+            position = 0
+    )
+    default String itemName() { return ""; }
+
+    @ConfigItem(
             keyName = "minMargin",
             name = "Minimum Margin",
             description = "Only flip items with at least this margin",
