@@ -105,7 +105,7 @@ public class GEFlipperScript extends Script {
                     int coins = Rs2Inventory.itemQuantity(ItemID.COINS_995);
                     if (coins < buyPrice) {
                         status = "Not enough gp";
-                        break;
+                        continue;
                     }
                     int quantity = coins / ((MAX_SLOTS - offers.size()) * buyPrice);
                     if (quantity <= 0) {
@@ -113,7 +113,7 @@ public class GEFlipperScript extends Script {
                     }
                     if (quantity <= 0) {
                         status = "Not enough gp";
-                        break;
+                        continue;
                     }
                     boolean placed = Rs2GrandExchange.buyItem(name, buyPrice, quantity);
                     if (!placed) {
