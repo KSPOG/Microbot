@@ -5,7 +5,9 @@ import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
+
 import java.text.NumberFormat;
+
 
 import javax.inject.Inject;
 import java.awt.*;
@@ -36,11 +38,17 @@ public class GEFlipperOverlay extends OverlayPanel {
             panelComponent.getChildren().add(LineComponent.builder()
                     .left("Profit:")
                     .right(fmt.format(GEFlipperScript.profit))
+
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Profit:")
+                    .right(Integer.toString(GEFlipperScript.profit))
+
                     .build());
 
             panelComponent.getChildren().add(LineComponent.builder()
                     .left("Profit p/h:")
                     .right(fmt.format(GEFlipperScript.profitPerHour))
+                    .right(Integer.toString(GEFlipperScript.profitPerHour))
                     .build());
 
         } catch (Exception ex) {
@@ -48,4 +56,5 @@ public class GEFlipperOverlay extends OverlayPanel {
         }
         return super.render(graphics);
     }
+}
 }
