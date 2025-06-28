@@ -101,13 +101,7 @@ public class GEFlipperScript extends Script {
                 }
                 if (Rs2GrandExchange.hasSoldOffer()) {
                     status = "Collecting";
-                    int before = Rs2Inventory.itemQuantity(ItemID.COINS_995);
                     Rs2GrandExchange.collect(true);
-                    int after = Rs2Inventory.itemQuantity(ItemID.COINS_995);
-                    int gained = after - before;
-                    if (gained > 0) {
-                        profit += gained;
-                    }
                     offers.removeIf(o -> o.selling && !Rs2Inventory.hasItem(o.name));
                 }
 
@@ -219,6 +213,7 @@ public class GEFlipperScript extends Script {
                     status = "Waiting";
                 }
 
+                profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
                 long elapsed = System.currentTimeMillis() - startTime;
                 profitPerHour = (int) (profit / (elapsed / 3600000.0));
 
