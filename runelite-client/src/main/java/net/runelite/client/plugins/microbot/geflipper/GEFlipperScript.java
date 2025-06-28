@@ -68,6 +68,7 @@ public class GEFlipperScript extends Script {
         itemQueue.clear();
         itemQueue.addAll(items);
         startingGp = Rs2Inventory.itemQuantity(ItemID.COINS_995);
+        profit = 0;
         startTime = System.currentTimeMillis();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -95,7 +96,14 @@ public class GEFlipperScript extends Script {
                 }
                 if (Rs2GrandExchange.hasSoldOffer()) {
                     status = "Collecting";
+                    int before = Rs2Inventory.itemQuantity(ItemID.COINS_995);
                     Rs2GrandExchange.collect(true);
+                    int after = Rs2Inventory.itemQuantity(ItemID.COINS_995);
+                    int gained = after - before;
+                    if (gained > 0) {
+                        profit += gained;
+                    }
+                    offers.removeIf(o -> o.selling && !Rs2Inventory.hasItem(o.name));
                 }
 
                 // cancel stale buy offers
@@ -169,6 +177,16 @@ public class GEFlipperScript extends Script {
                         status = "Not enough gp";
                         continue;
                     }
+
+                    // respect GE buy limits
+                    int buyLimit = 0;
+                    var stats = Microbot.getItemManager().getItemStats(id);
+                    if (stats != null) {
+                        buyLimit = stats.getGeLimit();
+                    }
+                    if (buyLimit > 0 && quantity > buyLimit) {
+                        quantity = buyLimit;
+                    }
                     boolean placed = Rs2GrandExchange.buyItem(name, buyPrice, quantity);
                     if (!placed) {
                         status = "Unable to buy";
@@ -185,7 +203,6 @@ public class GEFlipperScript extends Script {
                     offers.add(offer);
                 }
 
-                profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
                 long elapsed = System.currentTimeMillis() - startTime;
                 profitPerHour = (int) (profit / (elapsed / 3600000.0));
 
