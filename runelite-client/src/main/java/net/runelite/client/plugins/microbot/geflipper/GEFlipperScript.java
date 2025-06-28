@@ -29,6 +29,8 @@ public class GEFlipperScript extends Script {
         String name;
         int buyPrice;
         int sellPrice;
+        int quantity;
+        boolean selling;
     }
 
     private final List<Offer> offers = new ArrayList<>();
@@ -40,8 +42,6 @@ public class GEFlipperScript extends Script {
     private GEFlipperConfig config;
     private List<String> items = new ArrayList<>();
 
-    private enum State {BUY, WAIT_BUY, SELL, WAIT_SELL}
-    private State state = State.BUY;
 
     public boolean run(GEFlipperConfig config) {
         this.config = config;
@@ -61,72 +61,72 @@ public class GEFlipperScript extends Script {
 
                 if (items.isEmpty()) return;
 
-                switch (state) {
-                    case BUY:
-                        status = "Buying";
-                        if (offers.size() >= MAX_SLOTS) {
-                            state = State.WAIT_BUY;
-                            break;
-                        }
-                        String name = nextItem();
-                        int id = itemManager.getItemId(name);
-                        if (id <= 0) {
-                            status = "Item not found";
-                            break;
-                        }
-                        int buyPrice = Rs2GrandExchange.getOfferPrice(id);
-                        int sellPrice = Rs2GrandExchange.getSellPrice(id);
-                        if (buyPrice <= 0 || sellPrice <= 0) {
-                            status = "Price lookup failed";
-                            break;
-                        }
-                        int m = sellPrice - buyPrice;
-                        if (m < conf.minMargin()) {
-                            status = "Margin too low";
-                            break;
-                        }
-                        if (Rs2Inventory.itemQuantity(ItemID.COINS_995) < buyPrice) {
-                            status = "Not enough gp";
-                            break;
-                        }
-                        boolean placed = Rs2GrandExchange.buyItem(name, buyPrice, 1);
-                        if (!placed) {
-                            status = "Unable to buy";
-                            break;
-                        }
-                        Offer offer = new Offer();
-                        offer.name = name;
-                        offer.buyPrice = buyPrice;
-                        offer.sellPrice = sellPrice;
-                        offers.add(offer);
-                        if (offers.size() >= MAX_SLOTS) {
-                            state = State.WAIT_BUY;
-                        }
-                        break;
-                    case WAIT_BUY:
-                        status = "Waiting buy";
-                        if (Rs2GrandExchange.hasFinishedBuyingOffers()) {
-                            Rs2GrandExchange.collect(false);
-                            state = State.SELL;
-                        }
-                        break;
-                    case SELL:
+                // collect finished offers
+                if (Rs2GrandExchange.hasBoughtOffer()) {
+                    status = "Collecting";
+                    Rs2GrandExchange.collect(false);
+                }
+                if (Rs2GrandExchange.hasSoldOffer()) {
+                    status = "Collecting";
+                    Rs2GrandExchange.collect(true);
+                }
+
+                // place sell offers for bought items
+                for (Offer o : new ArrayList<>(offers)) {
+                    if (!o.selling && Rs2Inventory.hasItem(o.name)) {
                         status = "Selling";
-                        for (Offer o : offers) {
-                            Rs2GrandExchange.sellItem(o.name, 1, o.sellPrice);
-                        }
-                        state = State.WAIT_SELL;
+                        Rs2GrandExchange.sellItem(o.name, o.quantity, o.sellPrice);
+                        o.selling = true;
+                    }
+                    if (o.selling && !Rs2Inventory.hasItem(o.name)) {
+                        offers.remove(o);
+                    }
+                }
+
+                // place buy offers if slots available
+                while (offers.size() < MAX_SLOTS) {
+                    String name = nextItem();
+                    int id = itemManager.getItemId(name);
+                    if (id <= 0) {
+                        status = "Item not found";
+                        continue;
+                    }
+                    int buyPrice = Rs2GrandExchange.getOfferPrice(id);
+                    int sellPrice = Rs2GrandExchange.getSellPrice(id);
+                    if (buyPrice <= 0 || sellPrice <= 0) {
+                        status = "Price lookup failed";
+                        continue;
+                    }
+                    int margin = sellPrice - buyPrice;
+                    if (margin < conf.minMargin()) {
+                        status = "Margin too low";
+                        continue;
+                    }
+                    int coins = Rs2Inventory.itemQuantity(ItemID.COINS_995);
+                    if (coins < buyPrice) {
+                        status = "Not enough gp";
                         break;
-                    case WAIT_SELL:
-                        status = "Waiting sell";
-                        if (Rs2GrandExchange.hasFinishedSellingOffers()) {
-                            Rs2GrandExchange.collect(true);
-                            offers.clear();
-                            state = State.BUY;
-                        }
+                    }
+                    int quantity = coins / ((MAX_SLOTS - offers.size()) * buyPrice);
+                    if (quantity <= 0) {
+                        quantity = coins / buyPrice;
+                    }
+                    if (quantity <= 0) {
+                        status = "Not enough gp";
                         break;
-                    default:
+                    }
+                    boolean placed = Rs2GrandExchange.buyItem(name, buyPrice, quantity);
+                    if (!placed) {
+                        status = "Unable to buy";
                         break;
+                    }
+                    Offer offer = new Offer();
+                    offer.name = name;
+                    offer.buyPrice = buyPrice;
+                    offer.sellPrice = sellPrice;
+                    offer.quantity = quantity;
+                    offer.selling = false;
+                    offers.add(offer);
                 }
 
                 profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
