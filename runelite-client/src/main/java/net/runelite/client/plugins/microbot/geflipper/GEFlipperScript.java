@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
 
-    public static final String VERSION = "1.0";
+    public static final String VERSION = "1.1";
     public static int profit = 0;
     public static int profitPerHour = 0;
 
