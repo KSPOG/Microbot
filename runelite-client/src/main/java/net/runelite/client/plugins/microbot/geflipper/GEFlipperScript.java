@@ -71,18 +71,29 @@ public class GEFlipperScript extends Script {
                         String name = nextItem();
                         int id = itemManager.getItemId(name);
                         if (id <= 0) {
+                            status = "Item not found";
                             break;
                         }
                         int buyPrice = Rs2GrandExchange.getOfferPrice(id);
                         int sellPrice = Rs2GrandExchange.getSellPrice(id);
+                        if (buyPrice <= 0 || sellPrice <= 0) {
+                            status = "Price lookup failed";
+                            break;
+                        }
                         int m = sellPrice - buyPrice;
                         if (m < conf.minMargin()) {
+                            status = "Margin too low";
                             break;
                         }
                         if (Rs2Inventory.itemQuantity(ItemID.COINS_995) < buyPrice) {
+                            status = "Not enough gp";
                             break;
                         }
-                        Rs2GrandExchange.buyItem(name, buyPrice, 1);
+                        boolean placed = Rs2GrandExchange.buyItem(name, buyPrice, 1);
+                        if (!placed) {
+                            status = "Unable to buy";
+                            break;
+                        }
                         Offer offer = new Offer();
                         offer.name = name;
                         offer.buyPrice = buyPrice;
