@@ -9,6 +9,7 @@ import net.runelite.client.plugins.microbot.util.item.Rs2ItemManager;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
+import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
 
-    public static final String VERSION = "1.3";
+    public static final String VERSION = "1.4";
     public static int profit = 0;
     public static int profitPerHour = 0;
     public static String status = "";
@@ -60,6 +61,18 @@ public class GEFlipperScript extends Script {
                 if (!super.run()) return;
 
                 if (items.isEmpty()) return;
+
+                if (BreakHandlerScript.breakIn > 0 && BreakHandlerScript.breakIn <= 180) {
+                    status = "Waiting for break";
+                    if (Rs2GrandExchange.isOpen()) {
+                        Rs2GrandExchange.closeExchange();
+                    }
+                    return;
+                }
+
+                if (!Rs2GrandExchange.isOpen()) {
+                    Rs2GrandExchange.openExchange();
+                }
 
                 // collect finished offers
                 if (Rs2GrandExchange.hasBoughtOffer()) {
