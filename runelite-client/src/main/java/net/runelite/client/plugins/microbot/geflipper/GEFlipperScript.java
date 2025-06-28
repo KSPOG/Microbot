@@ -28,6 +28,7 @@ public class GEFlipperScript extends Script {
 
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
+    private static final long LOW_MARGIN_COOLDOWN = 5 * 60 * 1000L; // 5 minutes
     private long buyTimeoutMs = 25 * 60 * 1000L;
 
     private static class Offer {
@@ -42,6 +43,7 @@ public class GEFlipperScript extends Script {
     private final List<Offer> offers = new ArrayList<>();
     private final Queue<String> itemQueue = new LinkedList<>();
     private final Map<String, Long> lastTrade = new HashMap<>();
+    private final Map<String, Long> lowMarginCooldown = new HashMap<>();
     private int startingGp;
 
     public static long startTime;
@@ -57,6 +59,7 @@ public class GEFlipperScript extends Script {
         offers.clear();
         itemQueue.clear();
         lastTrade.clear();
+        lowMarginCooldown.clear();
 
         this.config = config;
         final GEFlipperConfig conf = this.config;
@@ -158,7 +161,7 @@ public class GEFlipperScript extends Script {
                     if (margin < conf.minMargin()) {
                         status = "Margin too low";
                         itemQueue.add(name);
-                        lastTrade.put(name, System.currentTimeMillis());
+                        lowMarginCooldown.put(name, System.currentTimeMillis());
                         continue;
                     }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
@@ -231,6 +234,7 @@ public class GEFlipperScript extends Script {
         offers.clear();
         itemQueue.clear();
         lastTrade.clear();
+        lowMarginCooldown.clear();
         profit = 0;
         profitPerHour = 0;
         status = "Stopped";
@@ -248,10 +252,17 @@ public class GEFlipperScript extends Script {
             }
             String name = itemQueue.poll();
             Long last = lastTrade.get(name);
-            if (last == null || now - last >= TRADE_COOLDOWN) {
-                return name;
+            if (last != null && now - last < TRADE_COOLDOWN) {
+                attempts++;
+                continue;
             }
-            attempts++;
+            Long marginTime = lowMarginCooldown.get(name);
+            if (marginTime != null && now - marginTime < LOW_MARGIN_COOLDOWN) {
+                attempts++;
+                continue;
+            }
+            lowMarginCooldown.remove(name);
+            return name;
         }
         return null;
     }
