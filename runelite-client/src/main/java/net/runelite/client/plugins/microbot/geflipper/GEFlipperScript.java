@@ -135,7 +135,9 @@ public class GEFlipperScript extends Script {
                 if (offers.size() >= MAX_SLOTS) {
                     status = "Waiting";
                 }
-                while (offers.size() < MAX_SLOTS) {
+                int attempts = 0;
+                while (offers.size() < MAX_SLOTS && attempts < items.size()) {
+                    attempts++;
                     String name = nextItem();
                     if (name == null) {
                         status = "All items on cooldown";
@@ -155,6 +157,7 @@ public class GEFlipperScript extends Script {
                     int margin = sellPrice - buyPrice;
                     if (margin < conf.minMargin()) {
                         status = "Margin too low";
+                        itemQueue.add(name);
                         continue;
                     }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
@@ -162,11 +165,13 @@ public class GEFlipperScript extends Script {
                     int volume = Math.min(buyVol, sellVol);
                     if (volume > 0 && volume < conf.minVolume()) {
                         status = "Volume too low";
+                        itemQueue.add(name);
                         continue;
                     }
                     int coins = Rs2Inventory.itemQuantity(ItemID.COINS_995);
                     if (coins < buyPrice) {
                         status = "Not enough gp";
+                        itemQueue.add(name);
                         continue;
                     }
                     int quantity = coins / ((MAX_SLOTS - offers.size()) * buyPrice);
