@@ -17,16 +17,18 @@ import java.util.Queue;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
 
     public static final String VERSION = "1.4";
     public static String status = "";
+    public static int profit = 0;
+    public static int profitPerHour = 0;
 
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
-    private static final long LOW_MARGIN_COOLDOWN = 5 * 60 * 1000L; // 5 minutes
     private long buyTimeoutMs = 25 * 60 * 1000L;
 
     private static class Offer {
@@ -41,7 +43,6 @@ public class GEFlipperScript extends Script {
     private final List<Offer> offers = new ArrayList<>();
     private final Queue<String> itemQueue = new LinkedList<>();
     private final Map<String, Long> lastTrade = new HashMap<>();
-    private final Map<String, Long> lowMarginCooldown = new HashMap<>();
 
     public static long startTime;
     private final Rs2ItemManager itemManager = new Rs2ItemManager();
@@ -56,7 +57,6 @@ public class GEFlipperScript extends Script {
         offers.clear();
         itemQueue.clear();
         lastTrade.clear();
-        lowMarginCooldown.clear();
 
         this.config = config;
         final GEFlipperConfig conf = this.config;
@@ -73,6 +73,8 @@ public class GEFlipperScript extends Script {
         itemQueue.clear();
         itemQueue.addAll(items);
         startTime = System.currentTimeMillis();
+        profit = 0;
+        profitPerHour = 0;
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
                 if (!Microbot.isLoggedIn()) return;
@@ -100,7 +102,17 @@ public class GEFlipperScript extends Script {
                 if (Rs2GrandExchange.hasSoldOffer()) {
                     status = "Collecting";
                     Rs2GrandExchange.collect(true);
-                    offers.removeIf(o -> o.selling && !Rs2Inventory.hasItem(o.name));
+                    for (Iterator<Offer> it = offers.iterator(); it.hasNext();) {
+                        Offer o = it.next();
+                        if (o.selling && !Rs2Inventory.hasItem(o.name)) {
+                            profit += (o.sellPrice - o.buyPrice) * o.quantity;
+                            long runtime = System.currentTimeMillis() - startTime;
+                            if (runtime > 0) {
+                                profitPerHour = (int) (profit * 3600000L / runtime);
+                            }
+                            it.remove();
+                        }
+                    }
                 }
 
                 // cancel stale buy offers
@@ -150,13 +162,6 @@ public class GEFlipperScript extends Script {
                     int sellPrice = Rs2GrandExchange.getSellPrice(id);
                     if (buyPrice <= 0 || sellPrice <= 0) {
                         status = "Price lookup failed";
-                        continue;
-                    }
-                    int margin = sellPrice - buyPrice;
-                    if (margin < conf.minMargin()) {
-                        status = "Margin too low";
-                        itemQueue.add(name);
-                        lowMarginCooldown.put(name, System.currentTimeMillis());
                         continue;
                     }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
@@ -226,7 +231,8 @@ public class GEFlipperScript extends Script {
         offers.clear();
         itemQueue.clear();
         lastTrade.clear();
-        lowMarginCooldown.clear();
+        profit = 0;
+        profitPerHour = 0;
         status = "Stopped";
     }
 
@@ -246,12 +252,7 @@ public class GEFlipperScript extends Script {
                 attempts++;
                 continue;
             }
-            Long marginTime = lowMarginCooldown.get(name);
-            if (marginTime != null && now - marginTime < LOW_MARGIN_COOLDOWN) {
-                attempts++;
-                continue;
-            }
-            lowMarginCooldown.remove(name);
+            // item cooldowns only based on trade history now
             return name;
         }
         return null;
