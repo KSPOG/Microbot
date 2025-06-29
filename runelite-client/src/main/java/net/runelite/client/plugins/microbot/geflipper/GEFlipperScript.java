@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class GEFlipperScript extends Script {
 
     /** Script version displayed in the overlay. */
-    public static final String VERSION = "1.0";
+    public static final String VERSION = "1.1";
     public static String status = "";
     /** Total profit made in gp. */
     public static long profit = 0L;
@@ -71,7 +71,8 @@ public class GEFlipperScript extends Script {
             items = new ArrayList<>();
             items.add(conf.itemName().trim());
         } else {
-            items = getTradeableF2PItems();
+            // items will be loaded after login
+            items = new ArrayList<>();
         }
         itemQueue.clear();
         itemQueue.addAll(items);
@@ -83,7 +84,14 @@ public class GEFlipperScript extends Script {
                 if (!Microbot.isLoggedIn()) return;
                 if (!super.run()) return;
 
-                if (items.isEmpty()) return;
+                if (items.isEmpty()) {
+                    items = getTradeableF2PItems();
+                    itemQueue.addAll(items);
+                    if (items.isEmpty()) {
+                        status = "Starting";
+                        return;
+                    }
+                }
 
                 if (BreakHandlerScript.breakIn > 0 && BreakHandlerScript.breakIn <= 180) {
                     status = "Waiting for break";
@@ -241,7 +249,11 @@ public class GEFlipperScript extends Script {
 
     private String nextItem() {
         if (items.isEmpty()) {
-            return null;
+            items = getTradeableF2PItems();
+            itemQueue.addAll(items);
+            if (items.isEmpty()) {
+                return null;
+            }
         }
         int attempts = 0;
         long now = System.currentTimeMillis();
