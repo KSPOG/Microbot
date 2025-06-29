@@ -22,10 +22,13 @@ import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
 
-    public static final String VERSION = "1.4";
+    /** Script version displayed in the overlay. */
+    public static final String VERSION = "1.0";
     public static String status = "";
-    public static int profit = 0;
-    public static int profitPerHour = 0;
+    /** Total profit made in gp. */
+    public static long profit = 0L;
+    /** Profit per hour in gp. */
+    public static long profitPerHour = 0L;
 
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
