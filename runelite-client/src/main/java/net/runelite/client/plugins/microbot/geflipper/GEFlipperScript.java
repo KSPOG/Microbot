@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 public class GEFlipperScript extends Script {
 
     public static final String VERSION = "1.4";
-    public static int profit = 0;
-    public static int profitPerHour = 0;
     public static String status = "";
 
     private static final int MAX_SLOTS = 3;
@@ -44,7 +42,6 @@ public class GEFlipperScript extends Script {
     private final Queue<String> itemQueue = new LinkedList<>();
     private final Map<String, Long> lastTrade = new HashMap<>();
     private final Map<String, Long> lowMarginCooldown = new HashMap<>();
-    private int startingGp;
 
     public static long startTime;
     private final Rs2ItemManager itemManager = new Rs2ItemManager();
@@ -75,8 +72,6 @@ public class GEFlipperScript extends Script {
         }
         itemQueue.clear();
         itemQueue.addAll(items);
-        startingGp = Rs2Inventory.itemQuantity(ItemID.COINS_995);
-        profit = 0;
         startTime = System.currentTimeMillis();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -216,9 +211,6 @@ public class GEFlipperScript extends Script {
                     status = "Waiting";
                 }
 
-                profit = Rs2Inventory.itemQuantity(ItemID.COINS_995) - startingGp;
-                long elapsed = System.currentTimeMillis() - startTime;
-                profitPerHour = (int) (profit / (elapsed / 3600000.0));
 
             } catch (Exception ex) {
                 Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
@@ -235,8 +227,6 @@ public class GEFlipperScript extends Script {
         itemQueue.clear();
         lastTrade.clear();
         lowMarginCooldown.clear();
-        profit = 0;
-        profitPerHour = 0;
         status = "Stopped";
     }
 
