@@ -470,6 +470,7 @@
 							<classesDirectory>${project.build.outputDirectory}</classesDirectory>
 							<includes>
 								<include>net/runelite/client/plugins/microbot/example/**</include>
+                        <include>net/runelite/client/plugins/microbot/geflipper/**</include>
 							</includes>
 							<finalName>example</finalName>
 							<archive>
