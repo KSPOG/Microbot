@@ -178,12 +178,6 @@ public class GEFlipperScript extends Script {
                         status = "Price lookup failed";
                         continue;
                     }
-                    int margin = sellPrice - buyPrice;
-                    if (margin < conf.minMargin()) {
-                        status = "Margin too low";
-                        itemQueue.add(name);
-                        continue;
-                    }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
                     int sellVol = Rs2GrandExchange.getSellingVolume(id);
                     int volume = Math.min(buyVol, sellVol);
