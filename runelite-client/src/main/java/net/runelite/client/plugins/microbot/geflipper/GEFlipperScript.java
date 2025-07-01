@@ -137,7 +137,8 @@ public class GEFlipperScript extends Script {
                     if (limit > 0 && (count >= limit || count >= limit - 1)) {
                         break;
                     }
-                    if (config.useTradeVolume() && Rs2GrandExchange.getBuyingVolume(item.getId()) < 1000) {
+                    if (config.useTradeVolume() &&
+                            Rs2GrandExchange.getBuyingVolume(item.getId()) < config.minimumTradeVolume()) {
                         break;
                     }
                     int price = Rs2GrandExchange.getPrice(item.getId());

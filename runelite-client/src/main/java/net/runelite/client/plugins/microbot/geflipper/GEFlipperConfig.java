@@ -21,4 +21,12 @@ public interface GEFlipperConfig extends Config {
             position = 1
     )
     default boolean useTradeVolume() { return false; }
+
+    @ConfigItem(
+            keyName = "minVolume",
+            name = "Minimum Trade Volume",
+            description = "Minimum trade volume when volume check enabled",
+            position = 2
+    )
+    default int minimumTradeVolume() { return 1000; }
 }
