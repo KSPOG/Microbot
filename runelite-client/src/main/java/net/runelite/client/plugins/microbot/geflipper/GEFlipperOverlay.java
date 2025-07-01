@@ -38,6 +38,10 @@ public class GEFlipperOverlay extends OverlayPanel {
                 .right(Long.toString(plugin.getProfitPerHour()))
                 .build());
         panelComponent.getChildren().add(LineComponent.builder()
+                .left("Status:")
+                .right(Microbot.status)
+                .build());
+        panelComponent.getChildren().add(LineComponent.builder()
                 .left("Run Time:")
                 .right(TimeUtils.getFormattedDurationBetween(plugin.getStartTime(), Instant.now()))
                 .build());

@@ -2,6 +2,7 @@ package net.runelite.client.plugins.microbot.geflipper;
 
 import net.runelite.api.ItemComposition;
 import net.runelite.client.game.ItemStats;
+import net.runelite.api.GrandExchangeOffer;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
@@ -21,6 +22,10 @@ public class GEFlipperScript extends Script {
 
     private final Map<Integer, Integer> bought = new HashMap<>();
     private final Map<GrandExchangeSlots, Instant> offerTimes = new HashMap<>();
+    private final Map<GrandExchangeSlots, Integer> slotItems = new HashMap<>();
+    private final Map<GrandExchangeSlots, Integer> buyPrices = new HashMap<>();
+    private final Map<GrandExchangeSlots, Integer> sellPrices = new HashMap<>();
+    private final Deque<ItemComposition> itemQueue = new ArrayDeque<>();
     private final List<ItemComposition> f2pItems = new ArrayList<>();
     private long profit = 0;
 
@@ -37,6 +42,7 @@ public class GEFlipperScript extends Script {
         this.config = config;
         Rs2AntibanSettings.naturalMouse = true;
         loadF2P();
+        refillQueue();
 
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
@@ -55,42 +61,7 @@ public class GEFlipperScript extends Script {
 
                 cancelOldOffers();
 
-                if (Rs2GrandExchange.hasBoughtOffer()) {
-                    Rs2GrandExchange.collectToInventory();
-                }
-                if (Rs2GrandExchange.hasSoldOffer()) {
-                    Rs2GrandExchange.collectToInventory();
-                }
-
-                if (Rs2GrandExchange.getAvailableSlot().getLeft() == null) {
-                    return;
-                }
-
-                ItemComposition item = f2pItems.get(random.nextInt(f2pItems.size()));
-                ItemStats stats = Microbot.getItemManager().getItemStats(item.getId());
-                if (stats == null) return;
-                int limit = stats.getGeLimit();
-                int count = bought.getOrDefault(item.getId(), 0);
-                if (limit > 0 && count >= limit) return;
-                if (limit > 0 && count >= limit - 1) return;
-
-                if (config.useTradeVolume() && Rs2GrandExchange.getBuyingVolume(item.getId()) < 1000) return;
-
-                int price = Rs2GrandExchange.getPrice(item.getId());
-                if (price <= 0) return;
-                int buyPrice = (int) (price * 0.95);
-                boolean placed = Rs2GrandExchange.buyItem(item.getName(), buyPrice, 1);
-                if (placed) {
-                    offerTimes.put(Rs2GrandExchange.getAvailableSlot().getLeft(), Instant.now());
-                    bought.put(item.getId(), count + 1);
-                    int sellPrice = (int) (price * 1.05);
-                    if (Rs2GrandExchange.hasFinishedBuyingOffers()) {
-                        Rs2GrandExchange.collectToInventory();
-                        if (Rs2GrandExchange.sellItem(item.getName(), 1, sellPrice)) {
-                            profit += sellPrice - buyPrice;
-                        }
-                    }
-                }
+                processSlots();
 
             } catch (Exception ex) {
                 Microbot.logStackTrace(this.getClass().getSimpleName(), ex);
@@ -109,6 +80,80 @@ public class GEFlipperScript extends Script {
             }
             return null;
         });
+    }
+
+    private void refillQueue() {
+        if (f2pItems.isEmpty()) return;
+        Collections.shuffle(f2pItems, random);
+        itemQueue.clear();
+        itemQueue.addAll(f2pItems);
+    }
+
+    private void processSlots() {
+        for (int i = 0; i < 3; i++) {
+            GrandExchangeSlots slot = GrandExchangeSlots.values()[i];
+            GrandExchangeOffer offer = Microbot.getClient().getGrandExchangeOffers()[i];
+
+            switch (offer.getState()) {
+                case BOUGHT:
+                    Microbot.status = "Collecting";
+                    Rs2GrandExchange.collectToInventory();
+                    ItemComposition boughtItem = Microbot.getItemManager().getItemComposition(slotItems.getOrDefault(slot, -1));
+                    if (boughtItem != null) {
+                        int sellPrice = sellPrices.getOrDefault(slot, 0);
+                        if (Rs2GrandExchange.sellItem(boughtItem.getName(), 1, sellPrice)) {
+                            Microbot.status = "Selling";
+                        }
+                    }
+                    break;
+                case SOLD:
+                    Microbot.status = "Collecting";
+                    Rs2GrandExchange.collectToInventory();
+                    int profitAdd = sellPrices.getOrDefault(slot, 0) - buyPrices.getOrDefault(slot, 0);
+                    profit += profitAdd;
+                    slotItems.remove(slot);
+                    buyPrices.remove(slot);
+                    sellPrices.remove(slot);
+                    offerTimes.remove(slot);
+                    break;
+                case EMPTY:
+                    slotItems.remove(slot);
+                    buyPrices.remove(slot);
+                    sellPrices.remove(slot);
+                    offerTimes.remove(slot);
+                    if (itemQueue.isEmpty()) {
+                        refillQueue();
+                    }
+                    ItemComposition item = itemQueue.poll();
+                    if (item == null) break;
+                    ItemStats stats = Microbot.getItemManager().getItemStats(item.getId());
+                    if (stats == null) break;
+                    int limit = stats.getGeLimit();
+                    int count = bought.getOrDefault(item.getId(), 0);
+                    if (limit > 0 && (count >= limit || count >= limit - 1)) {
+                        break;
+                    }
+                    if (config.useTradeVolume() && Rs2GrandExchange.getBuyingVolume(item.getId()) < 1000) {
+                        break;
+                    }
+                    int price = Rs2GrandExchange.getPrice(item.getId());
+                    if (price <= 0) break;
+                    int buyPrice = (int) (price * 0.95);
+                    int sellPrice = (int) (price * 1.05);
+                    Microbot.status = "Buying";
+                    if (Rs2GrandExchange.buyItem(item.getName(), buyPrice, 1)) {
+                        slotItems.put(slot, item.getId());
+                        buyPrices.put(slot, buyPrice);
+                        sellPrices.put(slot, sellPrice);
+                        bought.put(item.getId(), count + 1);
+                        offerTimes.put(slot, Instant.now());
+                    }
+                    break;
+                default:
+                    // BUYING or SELLING, do nothing
+                    break;
+            }
+        }
     }
 
     private void cancelOldOffers() {
