@@ -10,6 +10,8 @@ import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.grandexchange.GrandExchangeSlots;
 import net.runelite.client.plugins.microbot.util.grandexchange.Rs2GrandExchange;
+import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
+import net.runelite.api.ItemID;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -105,7 +107,7 @@ public class GEFlipperScript extends Script {
                     ItemComposition boughtItem = Microbot.getItemManager().getItemComposition(slotItems.getOrDefault(slot, -1));
                     if (boughtItem != null) {
                         int sellPrice = sellPrices.getOrDefault(slot, 0);
-                        if (Rs2GrandExchange.sellItem(boughtItem.getName(), 1, sellPrice)) {
+                        if (sellHigh(boughtItem, sellPrice, 1)) {
                             Microbot.status = "Selling";
                         }
                     }
@@ -162,8 +164,10 @@ public class GEFlipperScript extends Script {
                     if (price <= 0) break;
                     int buyPrice = (int) (price * 0.90); // buy low
                     int sellPrice = (int) (price * 1.10); // sell high
+                    int coins = Rs2Inventory.itemQuantity(ItemID.COINS_995);
+                    if (coins < buyPrice) break;
                     Microbot.status = "Buying";
-                    if (Rs2GrandExchange.buyItem(item.getName(), buyPrice, 1)) {
+                    if (buyLow(item, buyPrice, 1)) {
                         slotItems.put(slot, item.getId());
                         buyPrices.put(slot, buyPrice);
                         sellPrices.put(slot, sellPrice);
@@ -201,5 +205,13 @@ public class GEFlipperScript extends Script {
                 }
             }
         }
+    }
+
+    private boolean buyLow(ItemComposition item, int price, int quantity) {
+        return Rs2GrandExchange.buyItem(item.getName(), price, quantity);
+    }
+
+    private boolean sellHigh(ItemComposition item, int price, int quantity) {
+        return Rs2GrandExchange.sellItem(item.getName(), quantity, price);
     }
 }
