@@ -3,6 +3,7 @@ package net.runelite.client.plugins.microbot.geflipper;
 import net.runelite.api.ItemComposition;
 import net.runelite.client.game.ItemStats;
 import net.runelite.api.GrandExchangeOffer;
+import net.runelite.api.GrandExchangeOfferState;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
@@ -90,6 +91,8 @@ public class GEFlipperScript extends Script {
     }
 
     private void processSlots() {
+        boolean actionTaken = false;
+        boolean allBusy = true;
         for (int i = 0; i < 3; i++) {
             GrandExchangeSlots slot = GrandExchangeSlots.values()[i];
             GrandExchangeOffer offer = Microbot.getClient().getGrandExchangeOffers()[i];
@@ -115,6 +118,7 @@ public class GEFlipperScript extends Script {
                     buyPrices.remove(slot);
                     sellPrices.remove(slot);
                     offerTimes.remove(slot);
+                    actionTaken = true;
                     break;
                 case EMPTY:
                     slotItems.remove(slot);
@@ -147,12 +151,22 @@ public class GEFlipperScript extends Script {
                         sellPrices.put(slot, sellPrice);
                         bought.put(item.getId(), count + 1);
                         offerTimes.put(slot, Instant.now());
+                        actionTaken = true;
                     }
                     break;
                 default:
                     // BUYING or SELLING, do nothing
                     break;
             }
+            if (offer.getState() == GrandExchangeOfferState.EMPTY) {
+                allBusy = false;
+            } else if (offer.getState() == GrandExchangeOfferState.BOUGHT || offer.getState() == GrandExchangeOfferState.SOLD) {
+                allBusy = false;
+            }
+        }
+
+        if (!actionTaken && allBusy) {
+            Microbot.status = "Waiting";
         }
     }
 
