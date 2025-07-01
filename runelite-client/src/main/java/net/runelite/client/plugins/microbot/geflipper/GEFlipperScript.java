@@ -120,6 +120,16 @@ public class GEFlipperScript extends Script {
                     offerTimes.remove(slot);
                     actionTaken = true;
                     break;
+                case CANCELLED_BUY:
+                case CANCELLED_SELL:
+                    Microbot.status = "Collecting";
+                    Rs2GrandExchange.collectToInventory();
+                    slotItems.remove(slot);
+                    buyPrices.remove(slot);
+                    sellPrices.remove(slot);
+                    offerTimes.remove(slot);
+                    actionTaken = true;
+                    break;
                 case EMPTY:
                     slotItems.remove(slot);
                     buyPrices.remove(slot);
