@@ -60,7 +60,9 @@ public class GEFlipperScript extends Script {
 
                 if (!Rs2GrandExchange.isOpen()) {
                     Rs2GrandExchange.openExchange();
-                    return;
+                    if (!Rs2GrandExchange.isOpen()) {
+                        return; // wait until GE is open
+                    }
                 }
 
                 cancelOldOffers();
