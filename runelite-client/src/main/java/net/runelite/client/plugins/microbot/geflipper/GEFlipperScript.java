@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class GEFlipperScript extends Script {
 
     /** Script version displayed in the overlay. */
-    public static final String VERSION = "1.2";
+    public static final String VERSION = "1.3";
     public static String status = "";
     /** Total profit made in gp. */
     public static long profit = 0L;
@@ -178,6 +178,12 @@ public class GEFlipperScript extends Script {
                     }
                     int buyPrice = Rs2GrandExchange.getOfferPrice(id);
                     int sellPrice = Rs2GrandExchange.getSellPrice(id);
+                    if (buyPrice <= 0) {
+                        buyPrice = Microbot.getItemManager().getItemPrice(id);
+                    }
+                    if (sellPrice <= 0) {
+                        sellPrice = Microbot.getItemManager().getItemPrice(id);
+                    }
                     if (buyPrice <= 0 || sellPrice <= 0) {
                         status = "Price lookup failed";
                         continue;
