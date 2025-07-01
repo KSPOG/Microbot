@@ -18,12 +18,13 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class GEFlipperScript extends Script {
 
     /** Script version displayed in the overlay. */
-    public static final String VERSION = "1.1";
+    public static final String VERSION = "1.2";
     public static String status = "";
     /** Total profit made in gp. */
     public static long profit = 0L;
@@ -33,6 +34,13 @@ public class GEFlipperScript extends Script {
     private static final int MAX_SLOTS = 3;
     private static final long TRADE_COOLDOWN = 4 * 60 * 60 * 1000L;
     private long buyTimeoutMs = 25 * 60 * 1000L;
+
+    private static final List<String> DEFAULT_ITEMS = Arrays.asList(
+            "Air rune", "Mind rune", "Water rune", "Earth rune", "Fire rune",
+            "Body rune", "Chaos rune", "Nature rune", "Death rune", "Law rune",
+            "Steel bar", "Iron ore", "Coal", "Mithril ore", "Adamantite ore",
+            "Runite ore", "Oak plank", "Lobster", "Swordfish", "Tuna"
+    );
 
     private static class Offer {
         String name;
@@ -274,16 +282,21 @@ public class GEFlipperScript extends Script {
     }
 
     public List<String> getTradeableF2PItems() {
-        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
-            List<String> names = new ArrayList<>();
+        List<String> names = Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            List<String> list = new ArrayList<>();
             int count = Microbot.getClient().getItemCount();
             for (int id = 0; id < count; id++) {
                 ItemComposition comp = Microbot.getItemManager().getItemComposition(id);
                 if (comp != null && comp.isTradeable() && !comp.isMembers()) {
-                    names.add(comp.getName());
+                    list.add(comp.getName());
                 }
             }
-            return names;
+            return list;
         }).orElse(new ArrayList<>());
+
+        if (names.isEmpty()) {
+            names.addAll(DEFAULT_ITEMS);
+        }
+        return names;
     }
 }
