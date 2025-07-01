@@ -22,6 +22,7 @@ public class GEFlipperScript extends Script {
     private final Random random = new Random();
 
     private final Map<Integer, Integer> bought = new HashMap<>();
+    private final Map<Integer, Instant> firstBuyTime = new HashMap<>();
     private final Map<GrandExchangeSlots, Instant> offerTimes = new HashMap<>();
     private final Map<GrandExchangeSlots, Integer> slotItems = new HashMap<>();
     private final Map<GrandExchangeSlots, Integer> buyPrices = new HashMap<>();
@@ -144,6 +145,12 @@ public class GEFlipperScript extends Script {
                     if (stats == null) break;
                     int limit = stats.getGeLimit();
                     int count = bought.getOrDefault(item.getId(), 0);
+                    Instant first = firstBuyTime.get(item.getId());
+                    if (first != null && Duration.between(first, Instant.now()).toHours() >= 4) {
+                        count = 0;
+                        bought.put(item.getId(), 0);
+                        firstBuyTime.put(item.getId(), Instant.now());
+                    }
                     if (limit > 0 && (count >= limit || count >= limit - 1)) {
                         break;
                     }
@@ -153,14 +160,15 @@ public class GEFlipperScript extends Script {
                     }
                     int price = Rs2GrandExchange.getPrice(item.getId());
                     if (price <= 0) break;
-                    int buyPrice = (int) (price * 0.95);
-                    int sellPrice = (int) (price * 1.05);
+                    int buyPrice = (int) (price * 0.90); // buy low
+                    int sellPrice = (int) (price * 1.10); // sell high
                     Microbot.status = "Buying";
                     if (Rs2GrandExchange.buyItem(item.getName(), buyPrice, 1)) {
                         slotItems.put(slot, item.getId());
                         buyPrices.put(slot, buyPrice);
                         sellPrices.put(slot, sellPrice);
                         bought.put(item.getId(), count + 1);
+                        firstBuyTime.putIfAbsent(item.getId(), Instant.now());
                         offerTimes.put(slot, Instant.now());
                         actionTaken = true;
                     }
