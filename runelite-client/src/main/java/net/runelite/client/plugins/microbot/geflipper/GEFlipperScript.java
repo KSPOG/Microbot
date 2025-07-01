@@ -75,13 +75,8 @@ public class GEFlipperScript extends Script {
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
         status = "Starting";
-        if (conf.itemName() != null && !conf.itemName().trim().isEmpty()) {
-            items = new ArrayList<>();
-            items.add(conf.itemName().trim());
-        } else {
-            // items will be loaded after login
-            items = new ArrayList<>();
-        }
+        // items will be loaded after login
+        items = new ArrayList<>();
         itemQueue.clear();
         itemQueue.addAll(items);
         startTime = System.currentTimeMillis();
@@ -181,6 +176,12 @@ public class GEFlipperScript extends Script {
                     int sellPrice = Rs2GrandExchange.getSellPrice(id);
                     if (buyPrice <= 0 || sellPrice <= 0) {
                         status = "Price lookup failed";
+                        continue;
+                    }
+                    int margin = sellPrice - buyPrice;
+                    if (margin < conf.minMargin()) {
+                        status = "Margin too low";
+                        itemQueue.add(name);
                         continue;
                     }
                     int buyVol = Rs2GrandExchange.getBuyingVolume(id);
