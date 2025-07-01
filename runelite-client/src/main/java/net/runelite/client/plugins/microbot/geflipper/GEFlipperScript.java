@@ -155,6 +155,10 @@ public class GEFlipperScript extends Script {
                     if (price <= 0) break;
                     int buyPrice = (int) (price * 0.90); // buy low
                     int sellPrice = (int) (price * 1.10); // sell high
+
+                    int buyPrice = (int) (price * 0.95);
+                    int sellPrice = (int) (price * 1.05);
+
                     Microbot.status = "Buying";
                     if (Rs2GrandExchange.buyItem(item.getName(), buyPrice, 1)) {
                         slotItems.put(slot, item.getId());
@@ -194,4 +198,5 @@ public class GEFlipperScript extends Script {
             }
         }
     }
+}
 }

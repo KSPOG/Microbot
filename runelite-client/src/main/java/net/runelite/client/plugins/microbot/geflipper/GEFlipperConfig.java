@@ -30,3 +30,5 @@ public interface GEFlipperConfig extends Config {
     )
     default int minimumTradeVolume() { return 1000; }
 }
+
+}
