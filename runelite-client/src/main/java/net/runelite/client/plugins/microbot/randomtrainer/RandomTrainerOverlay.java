@@ -33,8 +33,9 @@ public class RandomTrainerOverlay extends OverlayPanel {
                 .left("Status: " + Microbot.status)
                 .build());
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("Current Task: " + (script.getCurrentTask() != null ? script.getCurrentTask().name() : "None"))
+                .left("Current Task: " + script.getCurrentTaskName())
                 .build());
         return super.render(graphics);
     }
+
 }

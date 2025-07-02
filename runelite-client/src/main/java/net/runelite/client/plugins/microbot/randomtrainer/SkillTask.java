@@ -11,4 +11,5 @@ public enum SkillTask {
     COOKING,
     RANGED,
     PRAYER
+
 }
