@@ -161,9 +161,12 @@ public class RandomTrainerScript extends Script {
 
         int tinCount = Rs2Inventory.itemQuantity("tin ore");
         int copperCount = Rs2Inventory.itemQuantity("copper ore");
-        String rock = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
-        if (Rs2GameObject.interact(rock, "Mine")) {
+        String rockName = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
+
+        var rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
+        if (rock != null && Rs2GameObject.interact(rock)) {
             waitingForAnim = true; // avoid spam clicking until animation begins
+            Rs2Player.waitForXpDrop(Skill.MINING, true);
         }
     }
 
