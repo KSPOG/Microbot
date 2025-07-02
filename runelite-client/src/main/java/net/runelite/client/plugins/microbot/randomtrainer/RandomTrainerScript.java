@@ -138,6 +138,10 @@ public class RandomTrainerScript extends Script {
             return;
         }
 
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            return;
+        }
+
         int tinCount = Rs2Inventory.itemQuantity("tin ore");
         int copperCount = Rs2Inventory.itemQuantity("copper ore");
         String rock = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
@@ -160,16 +164,30 @@ public class RandomTrainerScript extends Script {
         }
 
         int level = Rs2Player.getRealSkillLevel(Skill.MINING);
-        String[] pickaxes = {"Black pickaxe", "Steel pickaxe", "Iron pickaxe", "Bronze pickaxe"};
-        int[] requirements = {11, 6, 1, 1};
+        String[] pickaxes = {
+                "Rune pickaxe",
+                "Adamant pickaxe",
+                "Mithril pickaxe",
+                "Black pickaxe",
+                "Steel pickaxe",
+                "Iron pickaxe",
+                "Bronze pickaxe"
+        };
+        int[] requirements = {41, 31, 21, 11, 6, 1, 1};
+        String chosen = null;
         for (int i = 0; i < pickaxes.length; i++) {
             if (level >= requirements[i] && Rs2Bank.hasItem(pickaxes[i])) {
                 Rs2Bank.withdrawItem(true, pickaxes[i]);
+                chosen = pickaxes[i];
                 break;
             }
         }
         Rs2Bank.closeBank();
-        return Rs2Inventory.hasItem("pickaxe");
+        if (chosen != null) {
+            Rs2Inventory.interact(chosen, "Wield");
+        }
+        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))
+                || Rs2Inventory.hasItem("pickaxe");
     }
 
     private void startPlugin(Class<? extends Plugin> clazz) {

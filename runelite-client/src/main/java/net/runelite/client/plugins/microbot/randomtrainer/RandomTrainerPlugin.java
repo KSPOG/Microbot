@@ -1,7 +1,6 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
 import com.google.inject.Provides;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -10,7 +9,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 import java.awt.*;
 
-@Slf4j
 @PluginDescriptor(
         name = PluginDescriptor.Default + "Random Trainer",
         description = "Trains random skills",
