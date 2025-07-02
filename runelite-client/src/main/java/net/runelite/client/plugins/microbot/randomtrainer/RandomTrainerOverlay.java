@@ -34,11 +34,7 @@ public class RandomTrainerOverlay extends OverlayPanel {
                 .build());
         String task = "None";
         if (script != null) {
-            SkillTask current = script.getCurrentTask();
-            if (current != null) {
-                String n = current.name().toLowerCase();
-                task = Character.toUpperCase(n.charAt(0)) + n.substring(1);
-            }
+            task = script.getCurrentTaskName();
         }
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Current Task: " + task)

@@ -32,6 +32,10 @@ public class RandomTrainerScript extends Script {
     private boolean idleForBreak = false;
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
+        if (isRunning()) {
+            return false; // prevent multiple schedules which could freeze the client
+        }
+
         this.config = config;
         this.plugin = plugin;
 

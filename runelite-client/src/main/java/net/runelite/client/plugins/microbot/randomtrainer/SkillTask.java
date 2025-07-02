@@ -12,4 +12,8 @@ public enum SkillTask {
     RANGED,
     PRAYER;
 
+
 }
+
+}
+
