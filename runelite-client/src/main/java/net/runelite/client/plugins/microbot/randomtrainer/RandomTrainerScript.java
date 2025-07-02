@@ -11,6 +11,8 @@ import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.Skill;
 
@@ -32,6 +34,11 @@ public class RandomTrainerScript extends Script {
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
         this.config = config;
         this.plugin = plugin;
+
+        Rs2Antiban.resetAntibanSettings();
+        Rs2AntibanSettings.naturalMouse = true;
+        Rs2AntibanSettings.takeMicroBreaks = true;
+
         nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
         selectNewTask();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::loop, 0, 1, TimeUnit.SECONDS);
@@ -167,6 +174,7 @@ public class RandomTrainerScript extends Script {
         if (rock != null && Rs2GameObject.interact(rock)) {
             waitingForAnim = true; // avoid spam clicking until animation begins
             Rs2Player.waitForXpDrop(Skill.MINING, true);
+            Rs2Antiban.takeMicroBreakByChance();
         }
     }
 
