@@ -25,6 +25,14 @@ public interface RandomTrainerConfig extends Config {
     )
     default int switchDelay() { return 10; }
 
+            name = "Skill Switch Delay (s)",
+            description = "Time between selecting a new skill to train",
+            position = 0,
+            section = generalSection
+    )
+    default int switchDelay() { return 600; }
+
+
     @ConfigSection(
             name = "Combat",
             description = "Combat Training Goals",
@@ -85,4 +93,5 @@ public interface RandomTrainerConfig extends Config {
             section = combatSection
     )
     default int healAtHp() { return 0; }
+
 }
