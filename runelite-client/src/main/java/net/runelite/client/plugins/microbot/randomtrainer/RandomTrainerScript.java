@@ -6,7 +6,12 @@ import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
 import net.runelite.client.plugins.microbot.mining.AutoMiningPlugin;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
+import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
+import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
+import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
+import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.Skill;
 
 import java.util.Random;
@@ -93,7 +98,11 @@ public class RandomTrainerScript extends Script {
         Microbot.status = "Training " + currentTask.name();
         switch (currentTask) {
             case MINING:
-                startPlugin(AutoMiningPlugin.class);
+                if (Rs2Player.getRealSkillLevel(Skill.MINING) < 15) {
+                    trainLowLevelMining();
+                } else {
+                    startPlugin(AutoMiningPlugin.class);
+                }
                 break;
             default:
                 break;
@@ -108,6 +117,59 @@ public class RandomTrainerScript extends Script {
             default:
                 break;
         }
+    }
+
+    private void trainLowLevelMining() {
+        if (!ensurePickaxe()) {
+            return;
+        }
+
+        if (Rs2Inventory.isFull()) {
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll("tin ore");
+                Rs2Bank.depositAll("copper ore");
+            }
+            return;
+        }
+
+        WorldPoint mine = new WorldPoint(3288, 3363, 0);
+        if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
+            Rs2Walker.walkTo(mine);
+            return;
+        }
+
+        int tinCount = Rs2Inventory.itemQuantity("tin ore");
+        int copperCount = Rs2Inventory.itemQuantity("copper ore");
+        String rock = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
+        Rs2GameObject.interact(rock, "Mine");
+    }
+
+    private boolean ensurePickaxe() {
+        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) ||
+                Rs2Inventory.hasItem("pickaxe")) {
+            // attempt to wield if not equipped
+            if (!Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))) {
+                Rs2Inventory.interact("pickaxe", "Wield");
+            }
+            return true;
+        }
+
+        if (!Rs2Bank.isOpen()) {
+            Rs2Bank.walkToBankAndUseBank();
+            return false;
+        }
+
+        int level = Rs2Player.getRealSkillLevel(Skill.MINING);
+        String[] pickaxes = {"Black pickaxe", "Steel pickaxe", "Iron pickaxe", "Bronze pickaxe"};
+        int[] requirements = {11, 6, 1, 1};
+        for (int i = 0; i < pickaxes.length; i++) {
+            if (level >= requirements[i] && Rs2Bank.hasItem(pickaxes[i])) {
+                Rs2Bank.withdrawItem(true, pickaxes[i]);
+                break;
+            }
+        }
+        Rs2Bank.closeBank();
+        return Rs2Inventory.hasItem("pickaxe");
     }
 
     private void startPlugin(Class<? extends Plugin> clazz) {
