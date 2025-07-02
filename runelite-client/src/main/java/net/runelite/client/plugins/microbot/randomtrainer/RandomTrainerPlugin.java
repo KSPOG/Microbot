@@ -18,6 +18,8 @@ import java.awt.*;
         enabledByDefault = false
 )
 public class RandomTrainerPlugin extends Plugin {
+    // Script version for display in the overlay
+    static final String VERSION = RandomTrainerScript.VERSION;
     @Inject
     private RandomTrainerConfig config;
 

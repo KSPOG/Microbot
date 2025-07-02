@@ -22,6 +22,7 @@ public class RandomTrainerOverlay extends OverlayPanel {
 
     @Override
     public Dimension render(Graphics2D graphics) {
+        panelComponent.getChildren().clear();
         panelComponent.setPreferredSize(new Dimension(200, 80));
         panelComponent.getChildren().add(TitleComponent.builder()
                 .text("Random Trainer V" + RandomTrainerScript.VERSION)

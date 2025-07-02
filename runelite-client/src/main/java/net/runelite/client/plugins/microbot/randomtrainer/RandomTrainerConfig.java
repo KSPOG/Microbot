@@ -18,12 +18,12 @@ public interface RandomTrainerConfig extends Config {
 
     @ConfigItem(
             keyName = "switchDelay",
-            name = "Skill Switch Delay (s)",
-            description = "Time between selecting a new skill to train",
+            name = "Skill Switch Delay (min)",
+            description = "Time in minutes between selecting a new skill to train",
             position = 0,
             section = generalSection
     )
-    default int switchDelay() { return 600; }
+    default int switchDelay() { return 10; }
 
     @ConfigSection(
             name = "Combat",
@@ -76,4 +76,13 @@ public interface RandomTrainerConfig extends Config {
             section = combatSection
     )
     default int mageLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "healAtHp",
+            name = "Heal at HP",
+            description = "Eat food when HP is at or below this amount",
+            position = 5,
+            section = combatSection
+    )
+    default int healAtHp() { return 0; }
 }

@@ -3,11 +3,11 @@ package net.runelite.client.plugins.microbot.randomtrainer;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
-import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
 import net.runelite.client.plugins.microbot.mining.AutoMiningPlugin;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
-import net.runelite.client.plugins.microbot.util.math.Rs2Random;
+import net.runelite.client.plugins.microbot.util.player.Rs2Player;
+import net.runelite.api.Skill;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +25,7 @@ public class RandomTrainerScript extends Script {
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
         this.config = config;
         this.plugin = plugin;
-        nextSwitch = System.currentTimeMillis();
+        nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
         selectNewTask();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::loop, 0, 1, TimeUnit.SECONDS);
         return true;
@@ -46,10 +46,17 @@ public class RandomTrainerScript extends Script {
                 idleForBreak = false;
             }
 
+            if (config.healAtHp() > 0) {
+                int hp = Microbot.getClient().getBoostedSkillLevel(Skill.HITPOINTS);
+                if (hp <= config.healAtHp()) {
+                    Rs2Player.useFood();
+                }
+            }
+
             if (System.currentTimeMillis() >= nextSwitch) {
                 stopCurrentTask();
                 selectNewTask();
-                nextSwitch = System.currentTimeMillis() + config.switchDelay() * 1000L;
+                nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
             }
 
             executeCurrentTask();
@@ -73,7 +80,12 @@ public class RandomTrainerScript extends Script {
 
     private void selectNewTask() {
         SkillTask[] tasks = SkillTask.values();
-        currentTask = tasks[random.nextInt(tasks.length)];
+        SkillTask newTask;
+        do {
+            newTask = tasks[random.nextInt(tasks.length)];
+        } while (newTask == currentTask);
+
+        currentTask = newTask;
         Microbot.status = "Selected " + currentTask.name();
     }
 
