@@ -48,4 +48,8 @@ public class RandomTrainerPlugin extends Plugin {
     public boolean isBreakHandlerEnabled() {
         return net.runelite.client.plugins.microbot.Microbot.isPluginEnabled(net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin.class);
     }
+
 }
+
+}
+

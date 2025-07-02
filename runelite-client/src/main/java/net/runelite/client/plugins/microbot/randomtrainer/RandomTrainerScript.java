@@ -25,8 +25,11 @@ public class RandomTrainerScript extends Script {
     private SkillTask currentTask;
     private long nextSwitch;
     private final Random random = new Random();
+
     // flag to avoid clicking a rock multiple times before mining starts
     private boolean waitingForAnim = false;
+
+
     private boolean idleForBreak = false;
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
@@ -42,6 +45,7 @@ public class RandomTrainerScript extends Script {
         return currentTask;
     }
 
+
     public String getCurrentTaskName() {
         if (currentTask == null) {
             return "None";
@@ -49,6 +53,7 @@ public class RandomTrainerScript extends Script {
         String n = currentTask.name().toLowerCase();
         return Character.toUpperCase(n.charAt(0)) + n.substring(1);
     }
+
 
     private void loop() {
         try {
@@ -147,6 +152,7 @@ public class RandomTrainerScript extends Script {
             Rs2Walker.walkTo(mine);
             return;
         }
+
         // if we've clicked a rock and the animation hasn't started yet, wait
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
@@ -157,6 +163,11 @@ public class RandomTrainerScript extends Script {
 
         if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
             return; // wait until mining animation has finished
+
+
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            return;
+
         }
 
         int tinCount = Rs2Inventory.itemQuantity("tin ore");
@@ -165,6 +176,9 @@ public class RandomTrainerScript extends Script {
         if (Rs2GameObject.interact(rock, "Mine")) {
             waitingForAnim = true; // avoid spam clicking until animation begins
         }
+
+        Rs2GameObject.interact(rock, "Mine");
+
     }
 
     private boolean ensurePickaxe() {
@@ -222,4 +236,8 @@ public class RandomTrainerScript extends Script {
             Microbot.stopPlugin(p);
         }
     }
+
 }
+
+}
+
