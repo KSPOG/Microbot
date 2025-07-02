@@ -42,4 +42,8 @@ public class RandomTrainerOverlay extends OverlayPanel {
         return super.render(graphics);
     }
 
+
 }
+
+}
+

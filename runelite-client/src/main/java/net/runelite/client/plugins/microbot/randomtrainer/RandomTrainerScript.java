@@ -14,7 +14,9 @@ import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.api.coords.WorldPoint;
+
 import net.runelite.api.GameObject;
+
 import net.runelite.api.Skill;
 
 import java.util.Random;
@@ -175,7 +177,11 @@ public class RandomTrainerScript extends Script {
         int copperCount = Rs2Inventory.itemQuantity("copper ore");
         String rockName = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
 
+
         GameObject rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
+
+        var rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
+
         if (rock != null && Rs2GameObject.interact(rock)) {
             waitingForAnim = true; // avoid spam clicking until animation begins
             Rs2Player.waitForXpDrop(Skill.MINING, true);
@@ -239,4 +245,8 @@ public class RandomTrainerScript extends Script {
         }
     }
 
+
 }
+
+}
+

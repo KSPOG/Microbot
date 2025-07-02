@@ -86,4 +86,7 @@ public interface RandomTrainerConfig extends Config {
     )
     default int healAtHp() { return 0; }
 
+
+}
+
 }

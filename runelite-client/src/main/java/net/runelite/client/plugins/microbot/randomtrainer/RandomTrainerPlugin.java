@@ -50,3 +50,5 @@ public class RandomTrainerPlugin extends Plugin {
     }
 
 }
+
+}
