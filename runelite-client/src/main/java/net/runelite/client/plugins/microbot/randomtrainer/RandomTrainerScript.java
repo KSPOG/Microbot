@@ -1,114 +1,88 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.microbot.Microbot;
-import net.runelite.client.plugins.microbot.Script;
-import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin;
-import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
-import net.runelite.client.plugins.microbot.mining.AutoMiningPlugin;
-import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
-import net.runelite.client.plugins.microbot.util.math.Rs2Random;
+import net.runelite.client.config.Config;
+import net.runelite.client.config.ConfigGroup;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
+@ConfigGroup(RandomTrainerConfig.GROUP)
+public interface RandomTrainerConfig extends Config {
+    String GROUP = "randomtrainer";
 
-public class RandomTrainerScript extends Script {
-    public static final String VERSION = "1.0.0";
+    @ConfigSection(
+            name = "General",
+            description = "General settings",
+            position = 0
+    )
+    String generalSection = "general";
 
-    private RandomTrainerConfig config;
-    private RandomTrainerPlugin plugin;
-    private SkillTask currentTask;
-    private long nextSwitch;
-    private final Random random = new Random();
-    private boolean idleForBreak = false;
+    @ConfigItem(
+            keyName = "switchDelay",
+            name = "Skill Switch Delay (min)",
+            description = "Time in minutes between selecting a new skill to train",
+            position = 0,
+            section = generalSection
+    )
+    default int switchDelay() { return 10; }
 
-    public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
-        this.config = config;
-        this.plugin = plugin;
-        nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
-        selectNewTask();
-        mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::loop, 0, 1, TimeUnit.SECONDS);
-        return true;
-    }
+    @ConfigSection(
+            name = "Combat",
+            description = "Combat Training Goals",
+            position = 1
+    )
+    String combatSection = "combat";
 
-    public SkillTask getCurrentTask() {
-        return currentTask;
-    }
+    @ConfigItem(
+            keyName = "attackLevels",
+            name = "Attack Levels",
+            description = "Levels of Attack to train",
+            position = 0,
+            section = combatSection
+    )
+    default int attackLevels() { return 0; }
 
-    private void loop() {
-        try {
-            if (!super.run() || !Microbot.isLoggedIn()) return;
+    @ConfigItem(
+            keyName = "strengthLevels",
+            name = "Strength Levels",
+            description = "Levels of Strength to train",
+            position = 1,
+            section = combatSection
+    )
+    default int strengthLevels() { return 0; }
 
-            if (shouldIdleForBreak()) {
-                handleUpcomingBreak();
-                return;
-            } else if (idleForBreak) {
-                idleForBreak = false;
-            }
+    @ConfigItem(
+            keyName = "defenceLevels",
+            name = "Defence Levels",
+            description = "Levels of Defence to train",
+            position = 2,
+            section = combatSection
+    )
+    default int defenceLevels() { return 0; }
 
-            if (System.currentTimeMillis() >= nextSwitch) {
-                stopCurrentTask();
-                selectNewTask();
-                nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
-            }
+    @ConfigItem(
+            keyName = "rangedLevels",
+            name = "Ranged Levels",
+            description = "Levels of Ranged to train",
+            position = 3,
+            section = combatSection
+    )
+    default int rangedLevels() { return 0; }
 
-            executeCurrentTask();
-        } catch (Exception ex) {
-            Microbot.log(ex.getMessage());
-        }
-    }
+    @ConfigItem(
+            keyName = "mageLevels",
+            name = "Mage Levels",
+            description = "Levels of Magic to train",
+            position = 4,
+            section = combatSection
+    )
+    default int mageLevels() { return 0; }
 
-    private boolean shouldIdleForBreak() {
-        return plugin.isBreakHandlerEnabled() && BreakHandlerScript.breakIn > 0 && BreakHandlerScript.breakIn <= 180;
-    }
-
-    private void handleUpcomingBreak() {
-        Microbot.status = "Break soon, idling at bank";
-        if (!idleForBreak) {
-            Rs2Bank.walkToBankAndUseBank();
-            idleForBreak = true;
-        }
-        sleep(1000);
-    }
-
-    private void selectNewTask() {
-        SkillTask[] tasks = SkillTask.values();
-        currentTask = tasks[random.nextInt(tasks.length)];
-        Microbot.status = "Selected " + currentTask.name();
-    }
-
-    private void executeCurrentTask() {
-        Microbot.status = "Training " + currentTask.name();
-        switch (currentTask) {
-            case MINING:
-                startPlugin(AutoMiningPlugin.class);
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void stopCurrentTask() {
-        switch (currentTask) {
-            case MINING:
-                stopPlugin(AutoMiningPlugin.class);
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void startPlugin(Class<? extends Plugin> clazz) {
-        Plugin p = Microbot.getPlugin(clazz.getName());
-        if (p != null && !Microbot.isPluginEnabled(clazz)) {
-            Microbot.startPlugin(p);
-        }
-    }
-
-    private void stopPlugin(Class<? extends Plugin> clazz) {
-        Plugin p = Microbot.getPlugin(clazz.getName());
-        if (p != null && Microbot.isPluginEnabled(clazz)) {
-            Microbot.stopPlugin(p);
-        }
-    }
+    @ConfigItem(
+            keyName = "healAtHp",
+            name = "Heal at HP",
+            description = "Eat food when HP is at or below this amount",
+            position = 5,
+            section = combatSection
+    )
+    default int healAtHp() { return 0; }
 }
