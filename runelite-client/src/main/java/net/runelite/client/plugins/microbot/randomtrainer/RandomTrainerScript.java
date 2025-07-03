@@ -45,7 +45,8 @@ public class RandomTrainerScript extends Script {
 
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
-        Rs2AntibanSettings.takeMicroBreaks = true;
+        // Use action cooldowns instead of micro breaks
+        Rs2AntibanSettings.actionCooldownChance = 0.1;
 
         nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
         Microbot.status = "Selecting task";
@@ -194,7 +195,7 @@ public class RandomTrainerScript extends Script {
             waitingForAnim = true; // avoid spam clicking until animation begins
             animWaitStart = System.currentTimeMillis();
             Rs2Player.waitForXpDrop(Skill.MINING, true);
-            Rs2Antiban.takeMicroBreakByChance();
+            Rs2Antiban.actionCooldown();
         }
     }
 
