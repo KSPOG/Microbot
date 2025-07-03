@@ -30,6 +30,7 @@ public class RandomTrainerScript extends Script {
     private final Random random = new Random();
     // flag to avoid clicking a rock multiple times before mining starts
     private boolean waitingForAnim = false;
+    private long animWaitStart = 0L;
     private boolean idleForBreak = false;
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
@@ -45,6 +46,7 @@ public class RandomTrainerScript extends Script {
         Rs2AntibanSettings.takeMicroBreaks = true;
 
         nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
+        Microbot.status = "Selecting task";
         selectNewTask();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::loop, 0, 1, TimeUnit.SECONDS);
         return true;
@@ -113,13 +115,13 @@ public class RandomTrainerScript extends Script {
         } while (newTask == currentTask);
 
         currentTask = newTask;
-        Microbot.status = "Selected " + currentTask.name();
+        Microbot.status = "Idle";
     }
 
     private void executeCurrentTask() {
-        Microbot.status = "Training " + currentTask.name();
         switch (currentTask) {
             case MINING:
+                Microbot.status = "Mining";
                 if (Rs2Player.getRealSkillLevel(Skill.MINING) < 15) {
                     trainLowLevelMining();
                 } else {
@@ -127,6 +129,7 @@ public class RandomTrainerScript extends Script {
                 }
                 break;
             default:
+                Microbot.status = "Idle";
                 break;
         }
     }
@@ -143,10 +146,12 @@ public class RandomTrainerScript extends Script {
 
     private void trainLowLevelMining() {
         if (!ensurePickaxe()) {
+            Microbot.status = "Getting pickaxe";
             return;
         }
 
         if (Rs2Inventory.isFull()) {
+            Microbot.status = "Banking ore";
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll("tin ore");
                 Rs2Bank.depositAll("copper ore");
@@ -156,6 +161,7 @@ public class RandomTrainerScript extends Script {
 
         WorldPoint mine = new WorldPoint(3288, 3363, 0);
         if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
+            Microbot.status = "Walking to mine";
             Rs2Walker.walkTo(mine);
             return;
         }
@@ -163,11 +169,16 @@ public class RandomTrainerScript extends Script {
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
                 waitingForAnim = false; // animation started
+            } else if (System.currentTimeMillis() - animWaitStart > 5000) {
+                // nothing happened for 5s, try again
+                waitingForAnim = false;
+            } else {
+                return;
             }
-            return;
         }
 
         if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            Microbot.status = "Mining";
             return; // wait until mining animation has finished
         }
 
@@ -177,7 +188,9 @@ public class RandomTrainerScript extends Script {
 
         GameObject rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
         if (rock != null && Rs2GameObject.interact(rock)) {
+            Microbot.status = "Mining";
             waitingForAnim = true; // avoid spam clicking until animation begins
+            animWaitStart = System.currentTimeMillis();
             Rs2Player.waitForXpDrop(Skill.MINING, true);
             Rs2Antiban.takeMicroBreakByChance();
         }
@@ -194,6 +207,7 @@ public class RandomTrainerScript extends Script {
         }
 
         if (!Rs2Bank.isOpen()) {
+            Microbot.status = "Walking to bank";
             Rs2Bank.walkToBankAndUseBank();
             return false;
         }
@@ -212,6 +226,7 @@ public class RandomTrainerScript extends Script {
         String chosen = null;
         for (int i = 0; i < pickaxes.length; i++) {
             if (level >= requirements[i] && Rs2Bank.hasItem(pickaxes[i])) {
+                Microbot.status = "Withdrawing pickaxe";
                 Rs2Bank.withdrawItem(true, pickaxes[i]);
                 chosen = pickaxes[i];
                 break;
