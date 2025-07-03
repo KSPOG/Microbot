@@ -1,48 +1,52 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
-import net.runelite.client.plugins.microbot.Microbot;
-import net.runelite.client.ui.overlay.OverlayPanel;
-import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
+import com.google.inject.Provides;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 import javax.inject.Inject;
 import java.awt.*;
 
-public class RandomTrainerOverlay extends OverlayPanel {
-    private final RandomTrainerScript script;
+@PluginDescriptor(
+        name = PluginDescriptor.Default + "Random Trainer",
+        description = "Trains random skills",
+        tags = {"random", "trainer", "microbot"},
+        enabledByDefault = false
+)
+public class RandomTrainerPlugin extends Plugin {
+    static final String VERSION = RandomTrainerScript.VERSION;
 
     @Inject
-    public RandomTrainerOverlay(RandomTrainerPlugin plugin, RandomTrainerScript script) {
-        super(plugin);
-        this.script = script;
-        setPosition(OverlayPosition.TOP_LEFT);
-        setNaughty();
+    private RandomTrainerConfig config;
+
+    @Provides
+    RandomTrainerConfig provideConfig(ConfigManager configManager) {
+        return configManager.getConfig(RandomTrainerConfig.class);
+    }
+
+    @Inject
+    private OverlayManager overlayManager;
+    @Inject
+    private RandomTrainerOverlay overlay;
+    @Inject
+    private RandomTrainerScript script;
+
+    @Override
+    protected void startUp() throws AWTException {
+        if (script.run(config, this)) {
+            overlayManager.add(overlay);
+        }
     }
 
     @Override
-    public Dimension render(Graphics2D graphics) {
-        panelComponent.getChildren().clear();
-        panelComponent.setPreferredSize(new Dimension(200, 96));
-        panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Random Trainer V" + RandomTrainerScript.VERSION)
-                .color(Color.GREEN)
-                .build());
-        panelComponent.getChildren().add(LineComponent.builder().build());
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Status: " + Microbot.status)
-                .build());
-        String task = "None";
-        if (script != null) {
-            task = script.getCurrentTaskName();
-        }
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Current Task: " + task)
-                .build());
-        String runtime = script != null ? script.getTimeRunning() : "00:00:00";
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Time Running: " + runtime)
-                .build());
-        return super.render(graphics);
+    protected void shutDown() {
+        script.shutdown();
+        overlayManager.remove(overlay);
+    }
+
+    public boolean isBreakHandlerEnabled() {
+        return net.runelite.client.plugins.microbot.Microbot.isPluginEnabled(net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin.class);
     }
 }
