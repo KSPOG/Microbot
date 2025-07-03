@@ -110,10 +110,15 @@ public class RandomTrainerScript extends Script {
     }
 
     private void selectNewTask() {
-        SkillTask[] tasks = SkillTask.values();
+        // Only choose among skills that have an implementation. All other
+        // tasks are placeholders and would leave the bot idling.
+        SkillTask[] available = {
+                SkillTask.MINING
+        };
+
         SkillTask newTask;
         do {
-            newTask = tasks[random.nextInt(tasks.length)];
+            newTask = available[random.nextInt(available.length)];
         } while (newTask == currentTask);
 
         currentTask = newTask;
