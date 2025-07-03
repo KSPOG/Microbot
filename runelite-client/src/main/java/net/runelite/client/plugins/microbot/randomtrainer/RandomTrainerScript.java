@@ -35,6 +35,22 @@ public class RandomTrainerScript extends Script {
     private long animWaitStart = 0L;
     private boolean idleForBreak = false;
 
+    private static final String[] PICKAXES = {
+            "Rune pickaxe",
+            "Adamant pickaxe",
+            "Mithril pickaxe",
+            "Black pickaxe",
+            "Steel pickaxe",
+            "Iron pickaxe",
+            "Bronze pickaxe"
+    };
+
+    // Minimum Mining levels required for each pickaxe
+    private static final int[] MINING_REQ = {41, 31, 21, 11, 6, 1, 1};
+
+    // Minimum Attack levels required to wield each pickaxe
+    private static final int[] ATTACK_REQ = {40, 30, 20, 10, 5, 1, 1};
+
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
         if (isRunning()) {
             return false; // prevent multiple schedules which could freeze the client
@@ -200,59 +216,45 @@ public class RandomTrainerScript extends Script {
     }
 
     private boolean ensurePickaxe() {
-        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) ||
-                Rs2Inventory.hasItem("pickaxe")) {
-            // attempt to wield if not equipped
-            if (!Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))) {
-                Rs2Inventory.interact("pickaxe", "Wield");
-            }
+        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
+        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
+
+        // Already wearing a pickaxe
+        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))) {
             return true;
         }
 
+        // Check inventory for a pickaxe and wield if requirements are met
+        for (int i = 0; i < PICKAXES.length; i++) {
+            String name = PICKAXES[i];
+            if (Rs2Inventory.hasItem(name)) {
+                if (attackLevel >= ATTACK_REQ[i] && miningLevel >= MINING_REQ[i]) {
+                    Rs2Inventory.interact(name, "Wield");
+                }
+                return true; // keep it in inventory even if we can't wield
+            }
+        }
+
+        // Need to withdraw a pickaxe from the bank
         if (!Rs2Bank.isOpen()) {
             Microbot.status = "Walking to bank";
             Rs2Bank.walkToBankAndUseBank();
             return false;
         }
 
-        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
-        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
-
-        String[] pickaxes = {
-                "Rune pickaxe",
-                "Adamant pickaxe",
-                "Mithril pickaxe",
-                "Black pickaxe",
-                "Steel pickaxe",
-                "Iron pickaxe",
-                "Bronze pickaxe"
-        };
-        // Minimum Mining level to use and Attack level to wield each pickaxe
-        int[] miningReq = {41, 31, 21, 11, 6, 1, 1};
-        int[] attackReq = {40, 30, 20, 10, 5, 1, 1};
-
-        String chosen = null;
-        int chosenMineReq = 1;
-        int chosenAtkReq = 1;
-
-        for (int i = 0; i < pickaxes.length; i++) {
-            if (miningLevel >= miningReq[i] && Rs2Bank.hasItem(pickaxes[i])) {
+        for (int i = 0; i < PICKAXES.length; i++) {
+            if (miningLevel >= MINING_REQ[i] && Rs2Bank.hasItem(PICKAXES[i])) {
                 Microbot.status = "Withdrawing pickaxe";
-                Rs2Bank.withdrawItem(true, pickaxes[i]);
-                chosen = pickaxes[i];
-                chosenMineReq = miningReq[i];
-                chosenAtkReq = attackReq[i];
+                Rs2Bank.withdrawItem(true, PICKAXES[i]);
+                if (attackLevel >= ATTACK_REQ[i]) {
+                    Rs2Inventory.interact(PICKAXES[i], "Wield");
+                }
                 break;
             }
         }
 
         Rs2Bank.closeBank();
 
-        if (chosen != null) {
-            if (attackLevel >= chosenAtkReq && miningLevel >= chosenMineReq) {
-                Rs2Inventory.interact(chosen, "Wield");
-            }
-        }
         return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))
                 || Rs2Inventory.hasItem("pickaxe");
     }
