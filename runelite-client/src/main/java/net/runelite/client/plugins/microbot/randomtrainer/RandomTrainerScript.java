@@ -142,7 +142,9 @@ public class RandomTrainerScript extends Script {
             case MINING:
                 Microbot.status = "Mining";
                 int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
-                if (miningLevel >= 15) {
+                if (miningLevel >= 30) {
+                    trainCoalMining();
+                } else if (miningLevel >= 15) {
                     trainIronMining();
                 } else {
                     trainLowLevelMining();
@@ -260,6 +262,64 @@ public class RandomTrainerScript extends Script {
         }
 
         GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 10, mine);
+        if (rock != null && Rs2GameObject.interact(rock)) {
+            Microbot.status = "Mining";
+            waitingForAnim = true;
+            animWaitStart = System.currentTimeMillis();
+            Rs2Player.waitForXpDrop(Skill.MINING, true);
+            Rs2Antiban.actionCooldown();
+        } else {
+            Microbot.status = "Idle";
+        }
+    }
+
+    private void trainCoalMining() {
+        if (!ensurePickaxe()) {
+            Microbot.status = "Getting pickaxe";
+            return;
+        }
+
+        if (Rs2Inventory.isFull()) {
+            Microbot.status = "Banking ore";
+            WorldPoint deposit = new WorldPoint(3045, 3236, 0);
+            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
+                Rs2Walker.walkTo(deposit);
+                return;
+            }
+            if (!Rs2DepositBox.isOpen()) {
+                Rs2DepositBox.openDepositBox();
+                return;
+            }
+            Rs2DepositBox.depositAll("coal", "iron ore", "copper ore", "tin ore");
+            Rs2DepositBox.closeDepositBox();
+            return;
+        }
+
+        WorldPoint mine = new WorldPoint(3083, 3422, 0);
+        if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
+            Microbot.status = "Walking to mine";
+            Rs2Walker.walkTo(mine);
+            return;
+        }
+
+        if (waitingForAnim) {
+            if (Rs2Player.isAnimating()) {
+                waitingForAnim = false;
+                Microbot.status = "Mining";
+            } else if (System.currentTimeMillis() - animWaitStart > 5000) {
+                waitingForAnim = false;
+                Microbot.status = "Idle";
+            } else {
+                return;
+            }
+        }
+
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            Microbot.status = "Mining";
+            return;
+        }
+
+        GameObject rock = Rs2GameObject.findReachableObject("Coal rocks", true, 10, mine);
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
             waitingForAnim = true;
