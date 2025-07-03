@@ -136,10 +136,11 @@ public class RandomTrainerScript extends Script {
         switch (currentTask) {
             case MINING:
                 Microbot.status = "Mining";
-                if (Rs2Player.getRealSkillLevel(Skill.MINING) < 15) {
-                    trainLowLevelMining();
-                } else {
+                int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
+                if (miningLevel >= 15) {
                     trainIronMining();
+                } else {
+                    trainLowLevelMining();
                 }
                 break;
             default:
