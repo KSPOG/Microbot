@@ -1,89 +1,12 @@
-package net.runelite.client.plugins.microbot.randomtrainer;
+# Random Trainer Plugin
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigSection;
+The Random Trainer plugin selects a skill at random and then trains it.  Currently only mining is implemented while other skills are placeholders.
 
-@ConfigGroup(RandomTrainerConfig.GROUP)
-public interface RandomTrainerConfig extends Config {
-    String GROUP = "randomtrainer";
+**Features**
 
-    @ConfigSection(
-            name = "General",
-            description = "General settings",
-            position = 0
-    )
-    String generalSection = "general";
+* Customize the delay between random skill selections (in minutes)
+* Combat section with goals for Attack, Strength, Defence, Ranged and Magic
+* Optionally heal when your hitpoints fall below a configured value
+* Works with BreakHandler to idle at a bank three minutes before a break
 
-    @ConfigItem(
-            keyName = "switchDelay",
-            name = "Skill Switch Delay (min)",
-            description = "Time in minutes between selecting a new skill to train",
-            position = 0,
-            section = generalSection
-    )
-    default int switchDelay() { return 10; }
-
-    @ConfigSection(
-            name = "Combat",
-            description = "Combat Training Goals",
-            position = 1
-    )
-    String combatSection = "combat";
-
-    @ConfigItem(
-            keyName = "attackLevels",
-            name = "Attack Levels",
-            description = "Levels of Attack to train",
-            position = 0,
-            section = combatSection
-    )
-    default int attackLevels() { return 0; }
-
-    @ConfigItem(
-            keyName = "strengthLevels",
-            name = "Strength Levels",
-            description = "Levels of Strength to train",
-            position = 1,
-            section = combatSection
-    )
-    default int strengthLevels() { return 0; }
-
-    @ConfigItem(
-            keyName = "defenceLevels",
-            name = "Defence Levels",
-            description = "Levels of Defence to train",
-            position = 2,
-            section = combatSection
-    )
-    default int defenceLevels() { return 0; }
-
-    @ConfigItem(
-            keyName = "rangedLevels",
-            name = "Ranged Levels",
-            description = "Levels of Ranged to train",
-            position = 3,
-            section = combatSection
-    )
-    default int rangedLevels() { return 0; }
-
-    @ConfigItem(
-            keyName = "mageLevels",
-            name = "Mage Levels",
-            description = "Levels of Magic to train",
-            position = 4,
-            section = combatSection
-    )
-    default int mageLevels() { return 0; }
-
-    @ConfigItem(
-            keyName = "healAtHp",
-            name = "Heal at HP",
-            description = "Eat food when HP is at or below this amount",
-            position = 5,
-            section = combatSection
-    )
-    default int healAtHp() { return 0; }
-
-}
+When Mining is under level 15 the script equips the best available pickaxe from your bank, mines tin and copper evenly in Varrock East, and banks the ore when your inventory is full.  It will only wield a pickaxe if your Attack level meets the requirement (e.g. 40 for rune, 30 for adamant). Once you reach level 15 it walks to 3289,3364 and mines iron rocks instead.
