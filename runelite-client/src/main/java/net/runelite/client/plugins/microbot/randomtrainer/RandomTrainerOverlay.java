@@ -13,11 +13,10 @@ public class RandomTrainerOverlay extends OverlayPanel {
     private final RandomTrainerScript script;
 
     @Inject
-    public RandomTrainerOverlay(RandomTrainerPlugin plugin, RandomTrainerScript script) {
-        super(plugin);
+    public RandomTrainerOverlay(RandomTrainerScript script) {
+        super();
         this.script = script;
         setPosition(OverlayPosition.TOP_LEFT);
-        setNaughty();
     }
 
     @Override

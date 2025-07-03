@@ -47,6 +47,19 @@ public class RandomTrainerScript extends Script {
     private static final int[] MINING_REQ = {41, 31, 21, 11, 6, 1, 1};
     private static final int[] ATTACK_REQ = {40, 30, 20, 10, 5, 1, 1};
 
+    private static final String[] AXES = {
+            "Rune axe",
+            "Adamant axe",
+            "Mithril axe",
+            "Black axe",
+            "Steel axe",
+            "Iron axe",
+            "Bronze axe"
+    };
+
+    private static final int[] WOODCUTTING_REQ = {41, 31, 21, 11, 6, 1, 1};
+    private static final int[] AXE_ATTACK_REQ = {40, 30, 20, 10, 5, 1, 1};
+
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
         if (isRunning() || !Microbot.isLoggedIn()) {
             return false;
@@ -129,7 +142,13 @@ public class RandomTrainerScript extends Script {
     }
 
     private void selectNewTask() {
-        SkillTask[] available = { SkillTask.MINING };
+        Microbot.status = "Walking to Bank";
+        if (Rs2Bank.walkToBankAndUseBank()) {
+            Rs2Bank.depositAll();
+            Rs2Bank.closeBank();
+        }
+
+        SkillTask[] available = { SkillTask.MINING, SkillTask.WOODCUTTING };
         SkillTask newTask;
         do {
             newTask = available[random.nextInt(available.length)];
@@ -149,6 +168,13 @@ public class RandomTrainerScript extends Script {
                     trainIronMining();
                 } else {
                     trainLowLevelMining();
+                }
+                break;
+            case WOODCUTTING:
+                Microbot.status = "Woodcutting";
+                int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
+                if (wcLevel < 15) {
+                    trainLowLevelWoodcutting();
                 }
                 break;
             default:
@@ -172,10 +198,7 @@ public class RandomTrainerScript extends Script {
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll("tin ore");
                 Rs2Bank.depositAll("copper ore");
-                Rs2Bank.depositAll("Uncut diamond");
-                Rs2Bank.depositAll("Uncut sapphire");
-                Rs2Bank.depositAll("Uncut emerald");
-                Rs2Bank.depositAll("Uncut ruby");
+                depositUncutGems();
             }
             return;
         }
@@ -232,10 +255,7 @@ public class RandomTrainerScript extends Script {
                 Rs2Bank.depositAll("iron ore");
                 Rs2Bank.depositAll("copper ore");
                 Rs2Bank.depositAll("tin ore");
-                Rs2Bank.depositAll("Uncut diamond");
-                Rs2Bank.depositAll("Uncut sapphire");
-                Rs2Bank.depositAll("Uncut emerald");
-                Rs2Bank.depositAll("Uncut ruby");
+                depositUncutGems();
                 Rs2Bank.closeBank();
             }
             return;
@@ -290,10 +310,7 @@ public class RandomTrainerScript extends Script {
                 Rs2Bank.depositAll("iron ore");
                 Rs2Bank.depositAll("copper ore");
                 Rs2Bank.depositAll("tin ore");
-                Rs2Bank.depositAll("Uncut diamond");
-                Rs2Bank.depositAll("Uncut sapphire");
-                Rs2Bank.depositAll("Uncut emerald");
-                Rs2Bank.depositAll("Uncut ruby");
+                depositUncutGems();
                 Rs2Bank.closeBank();
             }
             return;
@@ -335,6 +352,105 @@ public class RandomTrainerScript extends Script {
         }
     }
 
+    private void depositUncutGems() {
+        Rs2Bank.depositAll("Uncut diamond");
+        Rs2Bank.depositAll("Uncut ruby");
+        Rs2Bank.depositAll("Uncut emerald");
+        Rs2Bank.depositAll("Uncut sapphire");
+    }
+
+    private void trainLowLevelWoodcutting() {
+        if (!ensureAxe()) {
+            Microbot.status = "Getting axe";
+            return;
+        }
+
+        if (Rs2Inventory.isFull()) {
+            Microbot.status = "Banking logs";
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll();
+                Rs2Bank.closeBank();
+            }
+            return;
+        }
+
+        WorldPoint trees = new WorldPoint(3162, 3454, 0);
+        if (Rs2Player.getWorldLocation().distanceTo(trees) > 5) {
+            Microbot.status = "Walking to trees";
+            Rs2Walker.walkTo(trees);
+            return;
+        }
+
+        if (waitingForAnim) {
+            if (Rs2Player.isAnimating()) {
+                waitingForAnim = false;
+                Microbot.status = "Woodcutting";
+            } else if (System.currentTimeMillis() - animWaitStart > 5000) {
+                waitingForAnim = false;
+                Microbot.status = "Idle";
+            } else {
+                return;
+            }
+        }
+
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            Microbot.status = "Woodcutting";
+            return;
+        }
+
+        GameObject tree = Rs2GameObject.findReachableObject("Tree", true, 10, trees);
+        if (tree != null && Rs2GameObject.interact(tree)) {
+            Microbot.status = "Woodcutting";
+            waitingForAnim = true;
+            animWaitStart = System.currentTimeMillis();
+            Rs2Player.waitForXpDrop(Skill.WOODCUTTING, true);
+            Rs2Antiban.actionCooldown();
+        } else {
+            Microbot.status = "Idle";
+        }
+    }
+
+    private boolean ensureAxe() {
+        int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
+        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
+
+        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("axe"))) {
+            return true;
+        }
+
+        for (int i = 0; i < AXES.length; i++) {
+            String name = AXES[i];
+            if (Rs2Inventory.hasItem(name)) {
+                if (attackLevel >= AXE_ATTACK_REQ[i] && wcLevel >= WOODCUTTING_REQ[i]) {
+                    Rs2Inventory.interact(name, "Wield");
+                }
+                return true;
+            }
+        }
+
+        if (!Rs2Bank.isOpen()) {
+            Microbot.status = "Walking to Bank";
+            Rs2Bank.walkToBankAndUseBank();
+            return false;
+        }
+
+        for (int i = 0; i < AXES.length; i++) {
+            if (wcLevel >= WOODCUTTING_REQ[i] && Rs2Bank.hasItem(AXES[i])) {
+                Microbot.status = "Withdrawing axe";
+                Rs2Bank.withdrawItem(true, AXES[i]);
+                if (attackLevel >= AXE_ATTACK_REQ[i]) {
+                    Rs2Inventory.interact(AXES[i], "Wield");
+                }
+                break;
+            }
+        }
+
+        Rs2Bank.closeBank();
+
+        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("axe")) ||
+                Rs2Inventory.contains(item -> item.getName().toLowerCase().contains("axe"));
+    }
+
     private boolean ensurePickaxe() {
         int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
         int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
@@ -372,7 +488,8 @@ public class RandomTrainerScript extends Script {
 
         Rs2Bank.closeBank();
 
-        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) || Rs2Inventory.hasItem("pickaxe");
+        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) ||
+                Rs2Inventory.contains(item -> item.getName().toLowerCase().contains("pickaxe"));
     }
 
     // Reserved for future plugin integrations
