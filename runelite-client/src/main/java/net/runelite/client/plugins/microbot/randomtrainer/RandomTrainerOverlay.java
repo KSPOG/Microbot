@@ -23,7 +23,7 @@ public class RandomTrainerOverlay extends OverlayPanel {
     @Override
     public Dimension render(Graphics2D graphics) {
         panelComponent.getChildren().clear();
-        panelComponent.setPreferredSize(new Dimension(200, 80));
+        panelComponent.setPreferredSize(new Dimension(200, 96));
         panelComponent.getChildren().add(TitleComponent.builder()
                 .text("Random Trainer V" + RandomTrainerScript.VERSION)
                 .color(Color.GREEN)
@@ -38,6 +38,10 @@ public class RandomTrainerOverlay extends OverlayPanel {
         }
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Current Task: " + task)
+                .build());
+        String runtime = script != null ? script.getTimeRunning() : "00:00:00";
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Time Running: " + runtime)
                 .build());
         return super.render(graphics);
     }

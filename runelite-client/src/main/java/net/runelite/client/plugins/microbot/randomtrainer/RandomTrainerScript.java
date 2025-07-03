@@ -16,6 +16,7 @@ import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +78,10 @@ public class RandomTrainerScript extends Script {
         }
         String n = currentTask.name().toLowerCase();
         return Character.toUpperCase(n.charAt(0)) + n.substring(1);
+    }
+
+    public String getTimeRunning() {
+        return DurationFormatUtils.formatDuration(getRunTime().toMillis(), "HH:mm:ss", true);
     }
 
     private void loop() {
@@ -285,7 +290,7 @@ public class RandomTrainerScript extends Script {
         }
 
         if (!Rs2Bank.isOpen()) {
-            Microbot.status = "Walking to bank";
+            Microbot.status = "Walking to Bank";
             Rs2Bank.walkToBankAndUseBank();
             return false;
         }
