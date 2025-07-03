@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.microbot.randomtrainer;
+package net.runelite.client.plugins.microbot.progressivetrainer;
 
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -9,38 +9,36 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 import javax.inject.Inject;
 import java.awt.*;
 
-public class RandomTrainerOverlay extends OverlayPanel {
-    private final RandomTrainerScript script;
+public class ProgressiveTrainerOverlay extends OverlayPanel {
+    private final ProgressiveTrainerPlugin plugin;
 
     @Inject
-    public RandomTrainerOverlay(RandomTrainerScript script) {
-        super();
-        this.script = script;
+    ProgressiveTrainerOverlay(ProgressiveTrainerPlugin plugin) {
+        super(plugin);
+        this.plugin = plugin;
         setPosition(OverlayPosition.TOP_LEFT);
+        setNaughty();
     }
 
     @Override
     public Dimension render(Graphics2D graphics) {
-        panelComponent.getChildren().clear();
-        panelComponent.setPreferredSize(new Dimension(200, 96));
+        panelComponent.setPreferredSize(new Dimension(200, 90));
         panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Random Trainer V" + RandomTrainerScript.VERSION)
+                .text("Progressive Trainer")
                 .color(Color.GREEN)
                 .build());
-        panelComponent.getChildren().add(LineComponent.builder().build());
+
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("Status: " + Microbot.status)
+                .left("Task: " + plugin.getCurrentTask())
                 .build());
-        String task = "None";
-        if (script != null) {
-            task = script.getCurrentTaskName();
-        }
+
+        long minutes = plugin.getMinutesUntilSwitch();
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("Current Task: " + task)
+                .left("Next switch: " + minutes + "m")
                 .build());
-        String runtime = script != null ? script.getTimeRunning() : "00:00:00";
+
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("Time Running: " + runtime)
+                .left(Microbot.status)
                 .build());
         return super.render(graphics);
     }
