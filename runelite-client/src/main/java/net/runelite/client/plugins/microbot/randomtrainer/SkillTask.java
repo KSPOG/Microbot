@@ -9,5 +9,7 @@ public enum SkillTask
     RUNECRAFTING,
     FIREMAKING,
     FISHING,
-    COOKING;
+    COOKING,
+    RANGED,
+    PRAYER;
 }

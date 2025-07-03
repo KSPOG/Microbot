@@ -4,7 +4,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
-import net.runelite.client.plugins.microbot.mining.AutoMiningPlugin;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
@@ -20,6 +19,9 @@ import net.runelite.api.Skill;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Singleton;
+
+@Singleton
 public class RandomTrainerScript extends Script {
     public static final String VERSION = "1.0.0";
 
@@ -122,11 +124,7 @@ public class RandomTrainerScript extends Script {
         switch (currentTask) {
             case MINING:
                 Microbot.status = "Mining";
-                if (Rs2Player.getRealSkillLevel(Skill.MINING) < 15) {
-                    trainLowLevelMining();
-                } else {
-                    startPlugin(AutoMiningPlugin.class);
-                }
+                trainLowLevelMining();
                 break;
             default:
                 Microbot.status = "Idle";
@@ -137,7 +135,6 @@ public class RandomTrainerScript extends Script {
     private void stopCurrentTask() {
         switch (currentTask) {
             case MINING:
-                stopPlugin(AutoMiningPlugin.class);
                 break;
             default:
                 break;
@@ -240,18 +237,9 @@ public class RandomTrainerScript extends Script {
                 || Rs2Inventory.hasItem("pickaxe");
     }
 
-    private void startPlugin(Class<? extends Plugin> clazz) {
-        Plugin p = Microbot.getPlugin(clazz.getName());
-        if (p != null && !Microbot.isPluginEnabled(clazz)) {
-            Microbot.startPlugin(p);
-        }
-    }
+    // No-op placeholders retained for future plugin integration
+    private void startPlugin(Class<? extends Plugin> clazz) { }
 
-    private void stopPlugin(Class<? extends Plugin> clazz) {
-        Plugin p = Microbot.getPlugin(clazz.getName());
-        if (p != null && Microbot.isPluginEnabled(clazz)) {
-            Microbot.stopPlugin(p);
-        }
-    }
+    private void stopPlugin(Class<? extends Plugin> clazz) { }
 
 }
