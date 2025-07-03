@@ -12,7 +12,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
 
-public class MiningTrainer {
+public class MiningTrainer implements SkillTrainer {
     private static final String[] PICKAXES = {
             "Rune pickaxe",
             "Adamant pickaxe",
@@ -130,6 +130,18 @@ public class MiningTrainer {
             Rs2Antiban.actionCooldown();
         } else {
             Microbot.status = "Idle";
+        }
+    }
+
+    @Override
+    public void train() {
+        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
+        if (miningLevel >= 30) {
+            trainCoalMining();
+        } else if (miningLevel >= 15) {
+            trainIronMining();
+        } else {
+            trainLowLevelMining();
         }
     }
 

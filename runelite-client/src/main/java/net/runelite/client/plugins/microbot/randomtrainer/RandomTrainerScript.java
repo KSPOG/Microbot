@@ -9,8 +9,11 @@ import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.api.Skill;
+import java.util.Map;
+import java.util.HashMap;
 import net.runelite.client.plugins.microbot.randomtrainer.MiningTrainer;
 import net.runelite.client.plugins.microbot.randomtrainer.WoodcuttingTrainer;
+import net.runelite.client.plugins.microbot.randomtrainer.SkillTrainer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import java.util.Random;
@@ -31,6 +34,7 @@ public class RandomTrainerScript extends Script {
 
     private final MiningTrainer miningTrainer = new MiningTrainer();
     private final WoodcuttingTrainer woodcuttingTrainer = new WoodcuttingTrainer();
+    private final Map<SkillTask, SkillTrainer> trainers = new HashMap<>();
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
         if (isRunning() || !Microbot.isLoggedIn()) {
@@ -39,6 +43,10 @@ public class RandomTrainerScript extends Script {
 
         this.config = config;
         this.plugin = plugin;
+
+        trainers.clear();
+        trainers.put(SkillTask.MINING, miningTrainer);
+        trainers.put(SkillTask.WOODCUTTING, woodcuttingTrainer);
 
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
@@ -126,7 +134,7 @@ public class RandomTrainerScript extends Script {
     private void selectNewTask() {
         bankInventory();
 
-        SkillTask[] available = { SkillTask.MINING, SkillTask.WOODCUTTING };
+        SkillTask[] available = trainers.keySet().toArray(new SkillTask[0]);
         SkillTask newTask;
         do {
             newTask = available[random.nextInt(available.length)];
@@ -136,28 +144,11 @@ public class RandomTrainerScript extends Script {
     }
 
     private void executeCurrentTask() {
-        switch (currentTask) {
-            case MINING:
-                Microbot.status = "Mining";
-                int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
-                if (miningLevel >= 30) {
-                    miningTrainer.trainCoalMining();
-                } else if (miningLevel >= 15) {
-                    miningTrainer.trainIronMining();
-                } else {
-                    miningTrainer.trainLowLevelMining();
-                }
-                break;
-            case WOODCUTTING:
-                Microbot.status = "Woodcutting";
-                int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
-                if (wcLevel < 15) {
-                    woodcuttingTrainer.trainLowLevelWoodcutting();
-                }
-                break;
-            default:
-                Microbot.status = "Idle";
-                break;
+        SkillTrainer trainer = trainers.get(currentTask);
+        if (trainer != null) {
+            trainer.train();
+        } else {
+            Microbot.status = "Idle";
         }
     }
 

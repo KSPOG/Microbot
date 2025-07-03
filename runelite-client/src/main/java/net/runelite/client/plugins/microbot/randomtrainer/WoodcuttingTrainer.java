@@ -12,7 +12,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
 
-public class WoodcuttingTrainer {
+public class WoodcuttingTrainer implements SkillTrainer {
     private static final String[] AXES = {
             "Rune axe",
             "Adamant axe",
@@ -118,6 +118,14 @@ public class WoodcuttingTrainer {
             Rs2Antiban.actionCooldown();
         } else {
             Microbot.status = "Idle";
+        }
+    }
+
+    @Override
+    public void train() {
+        int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
+        if (wcLevel < 15) {
+            trainLowLevelWoodcutting();
         }
     }
 }
