@@ -172,6 +172,10 @@ public class RandomTrainerScript extends Script {
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll("tin ore");
                 Rs2Bank.depositAll("copper ore");
+                Rs2Bank.depositAll("Uncut diamond");
+                Rs2Bank.depositAll("Uncut sapphire");
+                Rs2Bank.depositAll("Uncut emerald");
+                Rs2Bank.depositAll("Uncut ruby");
             }
             return;
         }
@@ -228,6 +232,10 @@ public class RandomTrainerScript extends Script {
                 Rs2Bank.depositAll("iron ore");
                 Rs2Bank.depositAll("copper ore");
                 Rs2Bank.depositAll("tin ore");
+                Rs2Bank.depositAll("Uncut diamond");
+                Rs2Bank.depositAll("Uncut sapphire");
+                Rs2Bank.depositAll("Uncut emerald");
+                Rs2Bank.depositAll("Uncut ruby");
                 Rs2Bank.closeBank();
             }
             return;
@@ -282,6 +290,10 @@ public class RandomTrainerScript extends Script {
                 Rs2Bank.depositAll("iron ore");
                 Rs2Bank.depositAll("copper ore");
                 Rs2Bank.depositAll("tin ore");
+                Rs2Bank.depositAll("Uncut diamond");
+                Rs2Bank.depositAll("Uncut sapphire");
+                Rs2Bank.depositAll("Uncut emerald");
+                Rs2Bank.depositAll("Uncut ruby");
                 Rs2Bank.closeBank();
             }
             return;
