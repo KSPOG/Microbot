@@ -86,7 +86,6 @@ public class RandomTrainerScript extends Script {
             }
 
             if (System.currentTimeMillis() >= nextSwitch) {
-                stopCurrentTask();
                 selectNewTask();
                 nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
             }
@@ -161,11 +160,6 @@ public class RandomTrainerScript extends Script {
                 break;
         }
     }
-
-    private void stopCurrentTask() {
-        // no-op for now
-    }
-
 
     // Reserved for future plugin integrations
 }

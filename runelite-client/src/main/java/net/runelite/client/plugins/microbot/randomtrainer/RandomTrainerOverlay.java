@@ -7,7 +7,9 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 import javax.inject.Inject;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 
 public class RandomTrainerOverlay extends OverlayPanel {
     private final RandomTrainerScript script;

@@ -7,7 +7,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 import javax.inject.Inject;
-import java.awt.*;
+import java.awt.AWTException;
 
 @PluginDescriptor(
         name = PluginDescriptor.Default + "Random Trainer",
