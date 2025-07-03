@@ -9,6 +9,7 @@ import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
+import net.runelite.client.plugins.microbot.util.depositbox.Rs2DepositBox;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
@@ -176,8 +177,10 @@ public class RandomTrainerScript extends Script {
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
                 waitingForAnim = false;
+                Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
+                Microbot.status = "Idle";
             } else {
                 return;
             }
@@ -199,6 +202,8 @@ public class RandomTrainerScript extends Script {
             animWaitStart = System.currentTimeMillis();
             Rs2Player.waitForXpDrop(Skill.MINING, true);
             Rs2Antiban.actionCooldown();
+        } else {
+            Microbot.status = "Idle";
         }
     }
 
@@ -210,15 +215,21 @@ public class RandomTrainerScript extends Script {
 
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
-            if (Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.depositAll("iron ore");
-                Rs2Bank.depositAll("copper ore");
-                Rs2Bank.depositAll("tin ore");
+            WorldPoint deposit = new WorldPoint(3045, 3236, 0);
+            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
+                Rs2Walker.walkTo(deposit);
+                return;
             }
+            if (!Rs2DepositBox.isOpen()) {
+                Rs2DepositBox.openDepositBox();
+                return;
+            }
+            Rs2DepositBox.depositAll("iron ore", "copper ore", "tin ore");
+            Rs2DepositBox.closeDepositBox();
             return;
         }
 
-        WorldPoint mine = new WorldPoint(3289, 3364, 0);
+        WorldPoint mine = new WorldPoint(2970, 3239, 0);
         if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
             Microbot.status = "Walking to mine";
             Rs2Walker.walkTo(mine);
@@ -228,8 +239,10 @@ public class RandomTrainerScript extends Script {
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
                 waitingForAnim = false;
+                Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
+                Microbot.status = "Idle";
             } else {
                 return;
             }
@@ -247,6 +260,8 @@ public class RandomTrainerScript extends Script {
             animWaitStart = System.currentTimeMillis();
             Rs2Player.waitForXpDrop(Skill.MINING, true);
             Rs2Antiban.actionCooldown();
+        } else {
+            Microbot.status = "Idle";
         }
     }
 
