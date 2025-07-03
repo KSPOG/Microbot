@@ -9,4 +9,4 @@ The Random Trainer plugin selects a skill at random and then trains it.  Current
 * Optionally heal when your hitpoints fall below a configured value
 * Works with BreakHandler to idle at a bank three minutes before a break
 
-When Mining is under level 15 the script equips the best available pickaxe from your bank, mines tin and copper evenly in Varrock East, and banks the ore when your inventory is full.  It will only wield a pickaxe if your Attack level meets the requirement (e.g. 40 for rune, 30 for adamant). Once you reach level 15 it walks to 3289,3364 and mines iron rocks instead.
+When Mining is under level 15 the script equips the best available pickaxe from your bank, mines tin and copper evenly in Varrock East, and banks the ore when your inventory is full.  It will only wield a pickaxe if your Attack level meets the requirement (e.g. 40 for rune, 30 for adamant). Once you reach level 15 it walks to 3289,3364 and mines iron rocks instead, banking any tin or copper ore left over from earlier.

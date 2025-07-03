@@ -212,6 +212,8 @@ public class RandomTrainerScript extends Script {
             Microbot.status = "Banking ore";
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll("iron ore");
+                Rs2Bank.depositAll("copper ore");
+                Rs2Bank.depositAll("tin ore");
             }
             return;
         }
