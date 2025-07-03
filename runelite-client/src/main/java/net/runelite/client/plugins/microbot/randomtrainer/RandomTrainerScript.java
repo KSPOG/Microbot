@@ -1,6 +1,5 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
-import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.Script;
 import net.runelite.client.plugins.microbot.breakhandler.BreakHandlerScript;
@@ -9,7 +8,6 @@ import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
-import net.runelite.client.plugins.microbot.util.depositbox.Rs2DepositBox;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
@@ -121,7 +119,10 @@ public class RandomTrainerScript extends Script {
     private void handleUpcomingBreak() {
         Microbot.status = "Break soon, idling at bank";
         if (!idleForBreak) {
-            Rs2Bank.walkToBankAndUseBank();
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll();
+                Rs2Bank.closeBank();
+            }
             idleForBreak = true;
         }
         sleep(1000);
@@ -223,17 +224,12 @@ public class RandomTrainerScript extends Script {
 
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
-            WorldPoint deposit = new WorldPoint(3045, 3236, 0);
-            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
-                Rs2Walker.walkTo(deposit);
-                return;
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll("iron ore");
+                Rs2Bank.depositAll("copper ore");
+                Rs2Bank.depositAll("tin ore");
+                Rs2Bank.closeBank();
             }
-            if (!Rs2DepositBox.isOpen()) {
-                Rs2DepositBox.openDepositBox();
-                return;
-            }
-            Rs2DepositBox.depositAll("iron ore", "copper ore", "tin ore");
-            Rs2DepositBox.closeDepositBox();
             return;
         }
 
@@ -281,17 +277,13 @@ public class RandomTrainerScript extends Script {
 
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
-            WorldPoint deposit = new WorldPoint(3045, 3236, 0);
-            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
-                Rs2Walker.walkTo(deposit);
-                return;
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll("coal");
+                Rs2Bank.depositAll("iron ore");
+                Rs2Bank.depositAll("copper ore");
+                Rs2Bank.depositAll("tin ore");
+                Rs2Bank.closeBank();
             }
-            if (!Rs2DepositBox.isOpen()) {
-                Rs2DepositBox.openDepositBox();
-                return;
-            }
-            Rs2DepositBox.depositAll("coal", "iron ore", "copper ore", "tin ore");
-            Rs2DepositBox.closeDepositBox();
             return;
         }
 
@@ -371,7 +363,5 @@ public class RandomTrainerScript extends Script {
         return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) || Rs2Inventory.hasItem("pickaxe");
     }
 
-    private void startPlugin(Class<? extends Plugin> clazz) { }
-
-    private void stopPlugin(Class<? extends Plugin> clazz) { }
+    // Reserved for future plugin integrations
 }
