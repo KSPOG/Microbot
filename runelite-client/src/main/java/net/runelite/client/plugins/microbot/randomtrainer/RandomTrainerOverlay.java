@@ -1,45 +1,89 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
-import net.runelite.client.plugins.microbot.Microbot;
-import net.runelite.client.ui.overlay.OverlayPanel;
-import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
+import net.runelite.client.config.Config;
+import net.runelite.client.config.ConfigGroup;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 
-import javax.inject.Inject;
-import java.awt.*;
+@ConfigGroup(RandomTrainerConfig.GROUP)
+public interface RandomTrainerConfig extends Config {
+    String GROUP = "randomtrainer";
 
-public class RandomTrainerOverlay extends OverlayPanel {
-    private final RandomTrainerScript script;
+    @ConfigSection(
+            name = "General",
+            description = "General settings",
+            position = 0
+    )
+    String generalSection = "general";
 
-    @Inject
-    public RandomTrainerOverlay(RandomTrainerPlugin plugin, RandomTrainerScript script) {
-        super(plugin);
-        this.script = script;
-        setPosition(OverlayPosition.TOP_LEFT);
-        setNaughty();
-    }
+    @ConfigItem(
+            keyName = "switchDelay",
+            name = "Skill Switch Delay (min)",
+            description = "Time in minutes between selecting a new skill to train",
+            position = 0,
+            section = generalSection
+    )
+    default int switchDelay() { return 10; }
 
-    @Override
-    public Dimension render(Graphics2D graphics) {
-        panelComponent.getChildren().clear();
-        panelComponent.setPreferredSize(new Dimension(200, 80));
-        panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Random Trainer V" + RandomTrainerScript.VERSION)
-                .color(Color.GREEN)
-                .build());
-        panelComponent.getChildren().add(LineComponent.builder().build());
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Status: " + Microbot.status)
-                .build());
-        String task = "None";
-        if (script != null) {
-            task = script.getCurrentTaskName();
-        }
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Current Task: " + task)
-                .build());
-        return super.render(graphics);
-    }
+    @ConfigSection(
+            name = "Combat",
+            description = "Combat Training Goals",
+            position = 1
+    )
+    String combatSection = "combat";
+
+    @ConfigItem(
+            keyName = "attackLevels",
+            name = "Attack Levels",
+            description = "Levels of Attack to train",
+            position = 0,
+            section = combatSection
+    )
+    default int attackLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "strengthLevels",
+            name = "Strength Levels",
+            description = "Levels of Strength to train",
+            position = 1,
+            section = combatSection
+    )
+    default int strengthLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "defenceLevels",
+            name = "Defence Levels",
+            description = "Levels of Defence to train",
+            position = 2,
+            section = combatSection
+    )
+    default int defenceLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "rangedLevels",
+            name = "Ranged Levels",
+            description = "Levels of Ranged to train",
+            position = 3,
+            section = combatSection
+    )
+    default int rangedLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "mageLevels",
+            name = "Mage Levels",
+            description = "Levels of Magic to train",
+            position = 4,
+            section = combatSection
+    )
+    default int mageLevels() { return 0; }
+
+    @ConfigItem(
+            keyName = "healAtHp",
+            name = "Heal at HP",
+            description = "Eat food when HP is at or below this amount",
+            position = 5,
+            section = combatSection
+    )
+    default int healAtHp() { return 0; }
 
 }

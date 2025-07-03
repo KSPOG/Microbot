@@ -1,5 +1,3 @@
-# Random Trainer Plugin
-
 The Random Trainer plugin selects a skill at random and then trains it.  Currently only mining is implemented while other skills are placeholders.
 
 **Features**
