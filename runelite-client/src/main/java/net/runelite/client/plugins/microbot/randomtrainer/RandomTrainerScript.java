@@ -10,6 +10,8 @@ import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.api.Skill;
 import java.util.Map;
 import java.util.HashMap;
+// Trainers implementing the generic SkillTrainer interface
+// are mapped to their corresponding tasks within this script.
 import net.runelite.client.plugins.microbot.randomtrainer.MiningTrainer;
 import net.runelite.client.plugins.microbot.randomtrainer.WoodcuttingTrainer;
 import net.runelite.client.plugins.microbot.randomtrainer.SkillTrainer;
