@@ -141,12 +141,19 @@ public class RandomTrainerScript extends Script {
         sleep(1000);
     }
 
-    private void selectNewTask() {
+    private void bankInventory() {
         Microbot.status = "Walking to Bank";
-        if (Rs2Bank.walkToBankAndUseBank()) {
-            Rs2Bank.depositAll();
-            Rs2Bank.closeBank();
+        if (!Rs2Bank.isOpen()) {
+            if (!Rs2Bank.walkToBankAndUseBank()) {
+                return;
+            }
         }
+        Rs2Bank.depositAll();
+        Rs2Bank.closeBank();
+    }
+
+    private void selectNewTask() {
+        bankInventory();
 
         SkillTask[] available = { SkillTask.MINING, SkillTask.WOODCUTTING };
         SkillTask newTask;
