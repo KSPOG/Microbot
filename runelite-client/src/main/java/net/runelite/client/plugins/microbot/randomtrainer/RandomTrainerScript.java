@@ -30,7 +30,6 @@ public class RandomTrainerScript extends Script {
     private SkillTask currentTask;
     private long nextSwitch;
     private final Random random = new Random();
-    // flag to avoid clicking a rock multiple times before mining starts
     private boolean waitingForAnim = false;
     private long animWaitStart = 0L;
     private boolean idleForBreak = false;
@@ -45,15 +44,12 @@ public class RandomTrainerScript extends Script {
             "Bronze pickaxe"
     };
 
-    // Minimum Mining levels required for each pickaxe
     private static final int[] MINING_REQ = {41, 31, 21, 11, 6, 1, 1};
-
-    // Minimum Attack levels required to wield each pickaxe
     private static final int[] ATTACK_REQ = {40, 30, 20, 10, 5, 1, 1};
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
-        if (isRunning()) {
-            return false; // prevent multiple schedules which could freeze the client
+        if (isRunning() || !Microbot.isLoggedIn()) {
+            return false;
         }
 
         this.config = config;
@@ -61,7 +57,6 @@ public class RandomTrainerScript extends Script {
 
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
-        // Use action cooldowns instead of micro breaks
         Rs2AntibanSettings.actionCooldownChance = 0.1;
 
         nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
@@ -127,17 +122,11 @@ public class RandomTrainerScript extends Script {
     }
 
     private void selectNewTask() {
-        // Only choose among skills that have an implementation. All other
-        // tasks are placeholders and would leave the bot idling.
-        SkillTask[] available = {
-                SkillTask.MINING
-        };
-
+        SkillTask[] available = { SkillTask.MINING };
         SkillTask newTask;
         do {
             newTask = available[random.nextInt(available.length)];
         } while (newTask == currentTask);
-
         currentTask = newTask;
         Microbot.status = "Idle";
     }
@@ -146,7 +135,11 @@ public class RandomTrainerScript extends Script {
         switch (currentTask) {
             case MINING:
                 Microbot.status = "Mining";
-                trainLowLevelMining();
+                if (Rs2Player.getRealSkillLevel(Skill.MINING) < 15) {
+                    trainLowLevelMining();
+                } else {
+                    trainIronMining();
+                }
                 break;
             default:
                 Microbot.status = "Idle";
@@ -155,12 +148,7 @@ public class RandomTrainerScript extends Script {
     }
 
     private void stopCurrentTask() {
-        switch (currentTask) {
-            case MINING:
-                break;
-            default:
-                break;
-        }
+        // no-op for now
     }
 
     private void trainLowLevelMining() {
@@ -184,12 +172,11 @@ public class RandomTrainerScript extends Script {
             Rs2Walker.walkTo(mine);
             return;
         }
-        // if we've clicked a rock and the animation hasn't started yet, wait
+
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false; // animation started
+                waitingForAnim = false;
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
-                // nothing happened for 5s, try again
                 waitingForAnim = false;
             } else {
                 return;
@@ -198,7 +185,7 @@ public class RandomTrainerScript extends Script {
 
         if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
             Microbot.status = "Mining";
-            return; // wait until mining animation has finished
+            return;
         }
 
         int tinCount = Rs2Inventory.itemQuantity("tin ore");
@@ -208,7 +195,53 @@ public class RandomTrainerScript extends Script {
         GameObject rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
-            waitingForAnim = true; // avoid spam clicking until animation begins
+            waitingForAnim = true;
+            animWaitStart = System.currentTimeMillis();
+            Rs2Player.waitForXpDrop(Skill.MINING, true);
+            Rs2Antiban.actionCooldown();
+        }
+    }
+
+    private void trainIronMining() {
+        if (!ensurePickaxe()) {
+            Microbot.status = "Getting pickaxe";
+            return;
+        }
+
+        if (Rs2Inventory.isFull()) {
+            Microbot.status = "Banking ore";
+            if (Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.depositAll("iron ore");
+            }
+            return;
+        }
+
+        WorldPoint mine = new WorldPoint(3289, 3364, 0);
+        if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
+            Microbot.status = "Walking to mine";
+            Rs2Walker.walkTo(mine);
+            return;
+        }
+
+        if (waitingForAnim) {
+            if (Rs2Player.isAnimating()) {
+                waitingForAnim = false;
+            } else if (System.currentTimeMillis() - animWaitStart > 5000) {
+                waitingForAnim = false;
+            } else {
+                return;
+            }
+        }
+
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            Microbot.status = "Mining";
+            return;
+        }
+
+        GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 10, mine);
+        if (rock != null && Rs2GameObject.interact(rock)) {
+            Microbot.status = "Mining";
+            waitingForAnim = true;
             animWaitStart = System.currentTimeMillis();
             Rs2Player.waitForXpDrop(Skill.MINING, true);
             Rs2Antiban.actionCooldown();
@@ -219,23 +252,20 @@ public class RandomTrainerScript extends Script {
         int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
         int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
 
-        // Already wearing a pickaxe
         if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))) {
             return true;
         }
 
-        // Check inventory for a pickaxe and wield if requirements are met
         for (int i = 0; i < PICKAXES.length; i++) {
             String name = PICKAXES[i];
             if (Rs2Inventory.hasItem(name)) {
                 if (attackLevel >= ATTACK_REQ[i] && miningLevel >= MINING_REQ[i]) {
                     Rs2Inventory.interact(name, "Wield");
                 }
-                return true; // keep it in inventory even if we can't wield
+                return true;
             }
         }
 
-        // Need to withdraw a pickaxe from the bank
         if (!Rs2Bank.isOpen()) {
             Microbot.status = "Walking to bank";
             Rs2Bank.walkToBankAndUseBank();
@@ -255,13 +285,10 @@ public class RandomTrainerScript extends Script {
 
         Rs2Bank.closeBank();
 
-        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))
-                || Rs2Inventory.hasItem("pickaxe");
+        return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) || Rs2Inventory.hasItem("pickaxe");
     }
 
-    // No-op placeholders retained for future plugin integration
     private void startPlugin(Class<? extends Plugin> clazz) { }
 
     private void stopPlugin(Class<? extends Plugin> clazz) { }
-
 }

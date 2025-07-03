@@ -85,5 +85,4 @@ public interface RandomTrainerConfig extends Config {
             section = combatSection
     )
     default int healAtHp() { return 0; }
-
 }

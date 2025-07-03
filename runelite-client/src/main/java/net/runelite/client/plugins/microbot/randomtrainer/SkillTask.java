@@ -1,7 +1,6 @@
 package net.runelite.client.plugins.microbot.randomtrainer;
 
-public enum SkillTask
-{
+public enum SkillTask {
     MINING,
     SMITHING,
     CRAFTING,

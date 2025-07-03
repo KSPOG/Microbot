@@ -16,8 +16,8 @@ import java.awt.*;
         enabledByDefault = false
 )
 public class RandomTrainerPlugin extends Plugin {
-    // Script version for display in the overlay
     static final String VERSION = RandomTrainerScript.VERSION;
+
     @Inject
     private RandomTrainerConfig config;
 
@@ -35,8 +35,9 @@ public class RandomTrainerPlugin extends Plugin {
 
     @Override
     protected void startUp() throws AWTException {
-        overlayManager.add(overlay);
-        script.run(config, this);
+        if (script.run(config, this)) {
+            overlayManager.add(overlay);
+        }
     }
 
     @Override
@@ -48,5 +49,4 @@ public class RandomTrainerPlugin extends Plugin {
     public boolean isBreakHandlerEnabled() {
         return net.runelite.client.plugins.microbot.Microbot.isPluginEnabled(net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin.class);
     }
-
 }
