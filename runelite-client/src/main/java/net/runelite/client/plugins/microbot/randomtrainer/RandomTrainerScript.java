@@ -215,7 +215,8 @@ public class RandomTrainerScript extends Script {
             return false;
         }
 
-        int level = Rs2Player.getRealSkillLevel(Skill.MINING);
+        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
+        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
         String[] pickaxes = {
                 "Rune pickaxe",
                 "Adamant pickaxe",
@@ -227,17 +228,21 @@ public class RandomTrainerScript extends Script {
         };
         int[] requirements = {41, 31, 21, 11, 6, 1, 1};
         String chosen = null;
+        int chosenReq = 1;
         for (int i = 0; i < pickaxes.length; i++) {
-            if (level >= requirements[i] && Rs2Bank.hasItem(pickaxes[i])) {
+            if (miningLevel >= requirements[i] && Rs2Bank.hasItem(pickaxes[i])) {
                 Microbot.status = "Withdrawing pickaxe";
                 Rs2Bank.withdrawItem(true, pickaxes[i]);
                 chosen = pickaxes[i];
+                chosenReq = requirements[i];
                 break;
             }
         }
         Rs2Bank.closeBank();
         if (chosen != null) {
-            Rs2Inventory.interact(chosen, "Wield");
+            if (attackLevel >= chosenReq) {
+                Rs2Inventory.interact(chosen, "Wield");
+            }
         }
         return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))
                 || Rs2Inventory.hasItem("pickaxe");
