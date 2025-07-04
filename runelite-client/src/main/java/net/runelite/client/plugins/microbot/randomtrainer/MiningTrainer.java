@@ -2,12 +2,14 @@ package net.runelite.client.plugins.microbot.randomtrainer;
 
 import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
+import net.runelite.client.plugins.microbot.util.depositbox.Rs2DepositBox;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import java.util.Arrays;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
@@ -102,7 +104,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -154,12 +156,9 @@ public class MiningTrainer implements SkillTrainer {
 
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
-            if (Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.depositAll("iron ore");
-                Rs2Bank.depositAll("copper ore");
-                Rs2Bank.depositAll("tin ore");
-                depositUncutGems();
-                Rs2Bank.closeBank();
+            if (Rs2DepositBox.walkToAndUseDepositBox()) {
+                Rs2DepositBox.depositAllExcept(Arrays.asList("pickaxe"), false);
+                Rs2DepositBox.closeDepositBox();
             }
             return;
         }
@@ -173,7 +172,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -229,7 +228,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;

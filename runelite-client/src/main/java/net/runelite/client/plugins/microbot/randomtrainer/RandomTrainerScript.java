@@ -51,6 +51,7 @@ public class RandomTrainerScript extends Script {
 
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
+        Rs2AntibanSettings.contextualVariability = true;
         Rs2AntibanSettings.actionCooldownChance = 0.1;
 
         nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
