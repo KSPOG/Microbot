@@ -21,7 +21,9 @@ public enum DepositBoxLocation {
     GEM_MINE(new WorldPoint(2842, 9383, 0)),
     GRAND_EXCHANGE(new WorldPoint(3174, 3493, 0)),
     LUMBRIDGE(new WorldPoint(3210, 3217, 2)),
-    PORT_SARIM(new WorldPoint(3045, 3234, 0)),
+    // Updated to the tile directly beside the deposit box so the player can
+    // easily interact with it when banking ores or logs.
+    PORT_SARIM(new WorldPoint(3045, 3236, 0)),
     VARROCK(new WorldPoint(3180, 3433, 0)),
     ALDARIN(new WorldPoint(1395, 2925, 0)),
     ARCEUUS(new WorldPoint(1626, 3737, 0)),
