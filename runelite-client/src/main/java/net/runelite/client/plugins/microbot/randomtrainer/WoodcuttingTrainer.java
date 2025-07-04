@@ -5,6 +5,7 @@ import net.runelite.client.plugins.microbot.util.bank.Rs2Bank;
 import net.runelite.client.plugins.microbot.util.inventory.Rs2Inventory;
 import net.runelite.client.plugins.microbot.util.equipment.Rs2Equipment;
 import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
+import net.runelite.client.plugins.microbot.util.depositbox.Rs2DepositBox;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
@@ -172,6 +173,57 @@ public class WoodcuttingTrainer implements SkillTrainer {
         }
     }
 
+    public void trainWillowWoodcutting() {
+        if (!ensureAxe()) {
+            Microbot.status = "Getting axe";
+            return;
+        }
+
+        if (Rs2Inventory.isFull()) {
+            Microbot.status = "Banking logs";
+            if (Rs2DepositBox.walkToAndUseDepositBox()) {
+                Rs2DepositBox.depositAll("Willow logs");
+                Rs2DepositBox.closeDepositBox();
+            }
+            return;
+        }
+
+        WorldPoint willows = new WorldPoint(3060, 3254, 0);
+        if (Rs2Player.getWorldLocation().distanceTo(willows) > 5) {
+            Microbot.status = "Walking to trees";
+            Rs2Walker.walkTo(willows);
+            return;
+        }
+
+        if (waitingForAnim) {
+            if (Rs2Player.isAnimating()) {
+                waitingForAnim = false;
+                Microbot.status = "Woodcutting";
+            } else if (System.currentTimeMillis() - animWaitStart > 5000) {
+                waitingForAnim = false;
+                Microbot.status = "Idle";
+            } else {
+                return;
+            }
+        }
+
+        if (Rs2Player.isAnimating() || Rs2Player.isMoving()) {
+            Microbot.status = "Woodcutting";
+            return;
+        }
+
+        GameObject tree = Rs2GameObject.findReachableObject("Willow", true, 10, willows);
+        if (tree != null && Rs2GameObject.interact(tree)) {
+            Microbot.status = "Woodcutting";
+            waitingForAnim = true;
+            animWaitStart = System.currentTimeMillis();
+            Rs2Player.waitForXpDrop(Skill.WOODCUTTING, true);
+            Rs2Antiban.actionCooldown();
+        } else {
+            Microbot.status = "Idle";
+        }
+    }
+
     @Override
     public void train() {
         int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
@@ -179,6 +231,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             trainLowLevelWoodcutting();
         } else if (wcLevel < 30) {
             trainOakWoodcutting();
+        } else if (wcLevel < 60) {
+            trainWillowWoodcutting();
         }
     }
 }
