@@ -102,7 +102,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -173,7 +173,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -229,7 +229,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
