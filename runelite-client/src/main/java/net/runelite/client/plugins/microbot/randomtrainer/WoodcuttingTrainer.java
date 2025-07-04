@@ -110,7 +110,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Tree", true, 10, trees);
+        GameObject tree = Rs2GameObject.findReachableObject("Tree", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;
@@ -161,7 +162,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Oak", true, 10, oaks);
+        GameObject tree = Rs2GameObject.findReachableObject("Oak", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;
@@ -181,10 +183,18 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking logs";
-            if (Rs2DepositBox.walkToAndUseDepositBox()) {
-                Rs2DepositBox.depositAll("Willow logs");
-                Rs2DepositBox.closeDepositBox();
+            WorldPoint deposit = new WorldPoint(3046, 3235, 0);
+            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
+                Rs2Walker.walkTo(deposit);
+                return;
             }
+            if (!Rs2DepositBox.isOpen()) {
+                if (!Rs2DepositBox.openDepositBox()) {
+                    return;
+                }
+            }
+            Rs2DepositBox.depositAll("Willow logs");
+            Rs2DepositBox.closeDepositBox();
             return;
         }
 
@@ -212,7 +222,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Willow", true, 10, willows);
+        GameObject tree = Rs2GameObject.findReachableObject("Willow", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;

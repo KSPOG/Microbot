@@ -102,7 +102,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -121,7 +121,8 @@ public class MiningTrainer implements SkillTrainer {
         int copperCount = Rs2Inventory.itemQuantity("copper ore");
         String rockName = tinCount <= copperCount ? "Tin rocks" : "Copper rocks";
 
-        GameObject rock = Rs2GameObject.findReachableObject(rockName, true, 10, mine);
+        GameObject rock = Rs2GameObject.findReachableObject(rockName, true, 10,
+                Rs2Player.getWorldLocation());
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
             waitingForAnim = true;
@@ -172,7 +173,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -187,7 +188,8 @@ public class MiningTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 10, mine);
+        GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 10,
+                Rs2Player.getWorldLocation());
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
             waitingForAnim = true;
@@ -227,7 +229,7 @@ public class MiningTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = false;
+                waitingForAnim = true;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -242,7 +244,8 @@ public class MiningTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject rock = Rs2GameObject.findReachableObject("Coal rocks", true, 10, mine);
+        GameObject rock = Rs2GameObject.findReachableObject("Coal rocks", true, 10,
+                Rs2Player.getWorldLocation());
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
             waitingForAnim = true;
