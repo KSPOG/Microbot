@@ -13,8 +13,10 @@ import java.util.Arrays;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
+import net.runelite.client.plugins.microbot.randomtrainer.RandomTrainerScript;
 
 public class MiningTrainer implements SkillTrainer {
+    private final RandomTrainerScript script;
     private static final String[] PICKAXES = {
             "Rune pickaxe",
             "Adamant pickaxe",
@@ -30,6 +32,10 @@ public class MiningTrainer implements SkillTrainer {
 
     private boolean waitingForAnim = false;
     private long animWaitStart = 0L;
+
+    public MiningTrainer(RandomTrainerScript script) {
+        this.script = script;
+    }
 
     private boolean ensurePickaxe() {
         int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
@@ -101,6 +107,7 @@ public class MiningTrainer implements SkillTrainer {
             Rs2Walker.walkTo(mine);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
@@ -169,6 +176,7 @@ public class MiningTrainer implements SkillTrainer {
             Rs2Walker.walkTo(mine);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
@@ -225,6 +233,7 @@ public class MiningTrainer implements SkillTrainer {
             Rs2Walker.walkTo(mine);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {

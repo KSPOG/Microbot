@@ -30,11 +30,12 @@ public class RandomTrainerScript extends Script {
     private RandomTrainerPlugin plugin;
     private SkillTask currentTask;
     private long nextSwitch;
+    private boolean switchTimerStarted;
     private final Random random = new Random();
     private boolean idleForBreak = false;
 
-    private final MiningTrainer miningTrainer = new MiningTrainer();
-    private final WoodcuttingTrainer woodcuttingTrainer = new WoodcuttingTrainer();
+    private MiningTrainer miningTrainer;
+    private WoodcuttingTrainer woodcuttingTrainer;
     private final Map<SkillTask, SkillTrainer> trainers = new HashMap<>();
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
@@ -45,6 +46,9 @@ public class RandomTrainerScript extends Script {
         this.config = config;
         this.plugin = plugin;
 
+        miningTrainer = new MiningTrainer(this);
+        woodcuttingTrainer = new WoodcuttingTrainer(this);
+
         trainers.clear();
         trainers.put(SkillTask.MINING, miningTrainer);
         trainers.put(SkillTask.WOODCUTTING, woodcuttingTrainer);
@@ -52,9 +56,12 @@ public class RandomTrainerScript extends Script {
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
         Rs2AntibanSettings.contextualVariability = true;
+        Rs2AntibanSettings.dynamicActivity = true;
+        Rs2AntibanSettings.behavioralVariability = true;
         Rs2AntibanSettings.actionCooldownChance = 0.1;
 
-        nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
+        nextSwitch = Long.MAX_VALUE;
+        switchTimerStarted = false;
         Microbot.status = "Selecting task";
         selectNewTask();
         mainScheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::loop, 0, 1, TimeUnit.SECONDS);
@@ -77,6 +84,13 @@ public class RandomTrainerScript extends Script {
         return DurationFormatUtils.formatDuration(getRunTime().toMillis(), "HH:mm:ss", true);
     }
 
+    public void startSwitchTimerIfNeeded() {
+        if (!switchTimerStarted) {
+            nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
+            switchTimerStarted = true;
+        }
+    }
+
     private void loop() {
         try {
             if (!super.run() || !Microbot.isLoggedIn()) return;
@@ -97,7 +111,6 @@ public class RandomTrainerScript extends Script {
 
             if (System.currentTimeMillis() >= nextSwitch) {
                 selectNewTask();
-                nextSwitch = System.currentTimeMillis() + config.switchDelay() * 60_000L;
             }
 
             executeCurrentTask();
@@ -142,6 +155,8 @@ public class RandomTrainerScript extends Script {
             newTask = available[random.nextInt(available.length)];
         } while (newTask == currentTask);
         currentTask = newTask;
+        switchTimerStarted = false;
+        nextSwitch = Long.MAX_VALUE;
         Microbot.status = "Idle";
     }
 

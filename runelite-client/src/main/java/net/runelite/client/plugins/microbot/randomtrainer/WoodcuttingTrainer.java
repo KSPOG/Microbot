@@ -12,8 +12,10 @@ import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
+import net.runelite.client.plugins.microbot.randomtrainer.RandomTrainerScript;
 
 public class WoodcuttingTrainer implements SkillTrainer {
+    private final RandomTrainerScript script;
     private static final String[] AXES = {
             "Rune axe",
             "Adamant axe",
@@ -29,6 +31,10 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
     private boolean waitingForAnim = false;
     private long animWaitStart = 0L;
+
+    public WoodcuttingTrainer(RandomTrainerScript script) {
+        this.script = script;
+    }
 
     private boolean ensureAxe() {
         int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
@@ -92,6 +98,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
             Rs2Walker.walkTo(trees);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
@@ -144,6 +151,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
             Rs2Walker.walkTo(oaks);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
@@ -204,6 +212,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
             Rs2Walker.walkTo(willows);
             return;
         }
+        script.startSwitchTimerIfNeeded();
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {

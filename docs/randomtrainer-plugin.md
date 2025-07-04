@@ -9,6 +9,7 @@ The Random Trainer plugin selects a skill at random and then trains it.  Mining 
 * Optionally heal when your hitpoints fall below a configured "Heal at HP" value
 * Works with BreakHandler to idle at a bank three minutes before a break
 * Before each new task the bot deposits the entire inventory so it starts with an empty backpack
+* Uses antiban features like contextual variability and dynamic activity
 
 When Mining is below level 15 the script equips the best available pickaxe from your bank, mines tin and copper evenly in Varrock East, and banks the ore when your inventory is full.  It will only wield a pickaxe if your Attack level meets the requirement (e.g. 40 for rune, 30 for adamant). Once you have at least level 15 it walks to 2970,3239 and mines iron rocks instead.  When your inventory is full it uses the nearest deposit box to store everything except your pickaxe before returning to the mine. After reaching level 30 the miner travels to 3083,3422 to mine coal. When the inventory is full it runs to the nearest bank, deposits all ore, and returns to mining.  Any uncut gems (sapphire, emerald, ruby, and diamond) found while mining are also deposited.
 
