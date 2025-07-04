@@ -92,7 +92,13 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        WorldPoint trees = new WorldPoint(3162, 3454, 0);
+        WorldPoint defaultTrees = new WorldPoint(3162, 3454, 0);
+        WorldPoint altTrees = new WorldPoint(3276, 3444, 0);
+
+        long playerCount = Rs2Player.getPlayers(p ->
+                p.getWorldLocation().distanceTo(defaultTrees) <= 5).count();
+        WorldPoint trees = playerCount > 3 ? altTrees : defaultTrees;
+
         if (Rs2Player.getWorldLocation().distanceTo(trees) > 5) {
             Microbot.status = "Walking to trees";
             Rs2Walker.walkTo(trees);
