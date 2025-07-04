@@ -23,7 +23,7 @@ public interface RandomTrainerConfig extends Config {
             position = 0,
             section = generalSection
     )
-    default int switchDelay() { return 10; }
+    default int switchDelay() { return 45; }
 
     @ConfigSection(
             name = "Combat",
