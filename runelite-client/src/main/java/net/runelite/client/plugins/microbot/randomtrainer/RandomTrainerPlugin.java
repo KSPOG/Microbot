@@ -10,7 +10,7 @@ import javax.inject.Inject;
 import java.awt.AWTException;
 
 @PluginDescriptor(
-        name = PluginDescriptor.Default + "Random Trainer",
+        name = PluginDescriptor.KSP + "Random Trainer",
         description = "Trains random skills",
         tags = {"random", "trainer", "microbot"},
         enabledByDefault = false
