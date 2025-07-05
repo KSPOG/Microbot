@@ -38,6 +38,45 @@ public class WoodcuttingTrainer implements SkillTrainer {
         this.script = script;
     }
 
+    private void upgradeAxe() {
+        if (!Rs2Bank.isOpen()) return;
+
+        int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
+        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
+
+        String bestAxe = null;
+        int bestIdx = -1;
+        for (int i = 0; i < AXES.length; i++) {
+            if (wcLevel >= WOODCUTTING_REQ[i] && attackLevel >= AXE_ATTACK_REQ[i] && Rs2Bank.hasItem(AXES[i])) {
+                bestAxe = AXES[i];
+                bestIdx = i;
+                break;
+            }
+        }
+
+        if (bestAxe == null) return;
+
+        if (Rs2Equipment.isWearing(bestAxe, true) || Rs2Inventory.hasItem(bestAxe)) {
+            return;
+        }
+
+        for (String axe : AXES) {
+            if (Rs2Equipment.isWearing(axe, true)) {
+                Rs2Equipment.interact(axe, "Remove");
+                sleep(200, 600);
+            }
+        }
+
+        for (String axe : AXES) {
+            Rs2Bank.depositAll(axe);
+        }
+
+        Rs2Bank.withdrawItem(true, bestAxe);
+        if (attackLevel >= AXE_ATTACK_REQ[bestIdx]) {
+            Rs2Inventory.interact(bestAxe, "Wield");
+        }
+    }
+
     private boolean ensureAxe() {
         int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
         int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
@@ -149,6 +188,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
             Microbot.status = "Banking logs";
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAllExcept(AXES);
+                upgradeAxe();
                 sleep(1000, 3000);
                 Rs2Bank.closeBank();
             }
