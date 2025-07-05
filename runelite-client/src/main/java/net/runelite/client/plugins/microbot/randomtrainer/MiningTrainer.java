@@ -87,6 +87,45 @@ sleep(1000,3000);
         Rs2Bank.depositAll("Uncut sapphire");
     }
 
+    private void upgradePickaxe() {
+        if (!Rs2Bank.isOpen()) return;
+
+        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
+        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
+
+        String bestPickaxe = null;
+        int bestIdx = -1;
+        for (int i = 0; i < PICKAXES.length; i++) {
+            if (miningLevel >= MINING_REQ[i] && attackLevel >= ATTACK_REQ[i] && Rs2Bank.hasItem(PICKAXES[i])) {
+                bestPickaxe = PICKAXES[i];
+                bestIdx = i;
+                break;
+            }
+        }
+
+        if (bestPickaxe == null) return;
+
+        if (Rs2Equipment.isWearing(bestPickaxe, true) || Rs2Inventory.hasItem(bestPickaxe)) {
+            return;
+        }
+
+        for (String axe : PICKAXES) {
+            if (Rs2Equipment.isWearing(axe, true)) {
+                Rs2Equipment.interact(axe, "Remove");
+                sleep(200, 600);
+            }
+        }
+
+        for (String axe : PICKAXES) {
+            Rs2Bank.depositAll(axe);
+        }
+
+        Rs2Bank.withdrawItem(true, bestPickaxe);
+        if (attackLevel >= ATTACK_REQ[bestIdx]) {
+            Rs2Inventory.interact(bestPickaxe, "Wield");
+        }
+    }
+
     public void trainLowLevelMining() {
         if (!ensurePickaxe()) {
             Microbot.status = "Getting pickaxe";
@@ -97,6 +136,7 @@ sleep(1000,3000);
             Microbot.status = "Banking ore";
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAllExcept(PICKAXES);
+                upgradePickaxe();
             }
             return;
         }
