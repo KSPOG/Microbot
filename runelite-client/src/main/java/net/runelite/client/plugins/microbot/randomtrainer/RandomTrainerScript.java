@@ -20,11 +20,14 @@ import org.apache.commons.lang3.time.DurationFormatUtils;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
+
 
 @Singleton
 public class RandomTrainerScript extends Script {
     public static final String VERSION = "1.0.0";
+
 
     private RandomTrainerConfig config;
     private RandomTrainerPlugin plugin;
@@ -128,6 +131,7 @@ public class RandomTrainerScript extends Script {
         if (!idleForBreak) {
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll();
+                sleep(1000, 3000);
                 Rs2Bank.closeBank();
             }
             idleForBreak = true;
@@ -139,11 +143,13 @@ public class RandomTrainerScript extends Script {
         Microbot.status = "Walking to Bank";
         if (!Rs2Bank.isOpen()) {
             if (!Rs2Bank.walkToBankAndUseBank()) {
+                Rs2Bank.openBank();
+                sleep(1000, 3000);
+                Rs2Bank.depositAll();
                 return;
             }
         }
-        Rs2Bank.depositAll();
-        Rs2Bank.closeBank();
+        sleep(1000, 3000);
     }
 
     private void selectNewTask() {
