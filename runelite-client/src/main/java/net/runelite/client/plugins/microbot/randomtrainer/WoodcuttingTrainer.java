@@ -14,8 +14,6 @@ import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
 import net.runelite.client.plugins.microbot.randomtrainer.RandomTrainerScript;
 
-import static net.runelite.client.plugins.microbot.util.Global.sleep;
-
 public class WoodcuttingTrainer implements SkillTrainer {
     private final RandomTrainerScript script;
     private static final String[] AXES = {
@@ -38,61 +36,33 @@ public class WoodcuttingTrainer implements SkillTrainer {
         this.script = script;
     }
 
-    private void upgradeAxe() {
-        if (!Rs2Bank.isOpen()) return;
-
-        int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
-        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
-
-        String bestAxe = null;
-        int bestIdx = -1;
-        for (int i = 0; i < AXES.length; i++) {
-            if (wcLevel >= WOODCUTTING_REQ[i] && attackLevel >= AXE_ATTACK_REQ[i] && Rs2Bank.hasItem(AXES[i])) {
-                bestAxe = AXES[i];
-                bestIdx = i;
-                break;
-            }
-        }
-
-        if (bestAxe == null) return;
-
-        if (Rs2Equipment.isWearing(bestAxe, true) || Rs2Inventory.hasItem(bestAxe)) {
-            return;
-        }
-
-        for (String axe : AXES) {
-            if (Rs2Equipment.isWearing(axe, true)) {
-                Rs2Equipment.interact(axe, "Remove");
-                sleep(200, 600);
-            }
-        }
-
-        for (String axe : AXES) {
-            Rs2Bank.depositAll(axe);
-        }
-
-        Rs2Bank.withdrawItem(true, bestAxe);
-        if (attackLevel >= AXE_ATTACK_REQ[bestIdx]) {
-            Rs2Inventory.interact(bestAxe, "Wield");
-        }
-    }
-
     private boolean ensureAxe() {
         int wcLevel = Rs2Player.getRealSkillLevel(Skill.WOODCUTTING);
         int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
 
-        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("axe"))) {
-            return true;
+        int bestIndex = AXES.length - 1;
+        for (int i = 0; i < AXES.length; i++) {
+            if (wcLevel >= WOODCUTTING_REQ[i]) {
+                bestIndex = i;
+                break;
+            }
         }
 
+        int currentIndex = -1;
         for (int i = 0; i < AXES.length; i++) {
             String name = AXES[i];
-            if (Rs2Inventory.hasItem(name)) {
-                if (attackLevel >= AXE_ATTACK_REQ[i] && wcLevel >= WOODCUTTING_REQ[i]) {
-                    Rs2Inventory.interact(name, "Wield");
-                }
-                return true;
+            if (Rs2Equipment.isWearing(eq -> eq.getName().equalsIgnoreCase(name)) || Rs2Inventory.hasItem(name)) {
+                currentIndex = i;
+                break;
             }
+        }
+
+        if (currentIndex != -1 && currentIndex <= bestIndex) {
+            if (!Rs2Equipment.isWearing(eq -> eq.getName().equalsIgnoreCase(AXES[currentIndex]))
+                    && attackLevel >= AXE_ATTACK_REQ[currentIndex]) {
+                Rs2Inventory.interact(AXES[currentIndex], "Wield");
+            }
+            return true;
         }
 
         if (!Rs2Bank.isOpen()) {
@@ -101,10 +71,13 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return false;
         }
 
-        for (int i = 0; i < AXES.length; i++) {
-            if (wcLevel >= WOODCUTTING_REQ[i] && Rs2Bank.hasItem(AXES[i])) {
+        if (currentIndex != -1) {
+            Rs2Bank.depositAll(AXES[currentIndex]);
+        }
+
+        for (int i = 0; i <= bestIndex; i++) {
+            if (Rs2Bank.hasItem(AXES[i])) {
                 Microbot.status = "Withdrawing axe";
-                Rs2Bank.depositAll();
                 Rs2Bank.withdrawItem(true, AXES[i]);
                 if (attackLevel >= AXE_ATTACK_REQ[i]) {
                     Rs2Inventory.interact(AXES[i], "Wield");
@@ -112,7 +85,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
                 break;
             }
         }
-        sleep(1000, 3000);
+
         Rs2Bank.closeBank();
 
         return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("axe")) ||
@@ -129,8 +102,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
             Microbot.status = "Banking logs";
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll();
-                upgradeAxe();
-                sleep(1000, 3000);
+                ensureAxe();
                 Rs2Bank.closeBank();
             }
             return;
@@ -143,7 +115,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
                 p.getWorldLocation().distanceTo(defaultTrees) <= 5).count();
         WorldPoint trees = playerCount > 3 ? altTrees : defaultTrees;
 
-        if (Rs2Player.getWorldLocation().distanceTo(trees) > 15) {
+        if (Rs2Player.getWorldLocation().distanceTo(trees) > 5) {
             Microbot.status = "Walking to trees";
             Rs2Walker.walkTo(trees);
             return;
@@ -152,7 +124,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Woodcutting";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -167,7 +139,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Tree", true, 15, trees);
+        GameObject tree = Rs2GameObject.findReachableObject("Tree", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;
@@ -188,9 +161,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking logs";
             if (Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.depositAllExcept(AXES);
-                upgradeAxe();
-                sleep(1000, 3000);
+                Rs2Bank.depositAll();
+                ensureAxe();
                 Rs2Bank.closeBank();
             }
             return;
@@ -198,7 +170,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
         WorldPoint oaks = new WorldPoint(3192, 3461, 0);
         if (Rs2Player.getWorldLocation().distanceTo(oaks) > 5) {
-            Microbot.status = "Walking to Oak trees";
+            Microbot.status = "Walking to trees";
             Rs2Walker.walkTo(oaks);
             return;
         }
@@ -206,7 +178,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Woodcutting";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -221,7 +193,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Oak tree", true, 5, oaks);
+        GameObject tree = Rs2GameObject.findReachableObject("Oak", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;
@@ -239,27 +212,27 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        WorldPoint depoport = new WorldPoint(3046, 3236, 0);
         if (Rs2Inventory.isFull()) {
-            if (Rs2Player.getWorldLocation().distanceTo(depoport) > 5) {
-                Microbot.status = "Walking to Deposit Box";
-                Rs2Walker.walkTo(depoport);
+            Microbot.status = "Banking logs";
+            WorldPoint deposit = new WorldPoint(3046, 3235, 0);
+            if (Rs2Player.getWorldLocation().distanceTo(deposit) > 5) {
+                Rs2Walker.walkTo(deposit);
                 return;
             }
-            if (Rs2Inventory.isFull()) {
-                Microbot.status = "Banking logs";
-                if (Rs2DepositBox.walkToAndUseDepositBox()) {
-                    Rs2DepositBox.depositAllExcept(AXES);
-                    sleep(1000, 3000);
-                    Rs2DepositBox.closeDepositBox();
+            if (!Rs2DepositBox.isOpen()) {
+                if (!Rs2DepositBox.openDepositBox()) {
+                    return;
                 }
-                return;
             }
+            Rs2DepositBox.depositAll("Willow logs");
+            Rs2DepositBox.closeDepositBox();
+            ensureAxe();
+            return;
         }
 
         WorldPoint willows = new WorldPoint(3060, 3254, 0);
         if (Rs2Player.getWorldLocation().distanceTo(willows) > 5) {
-            Microbot.status = "Walking to Willow trees";
+            Microbot.status = "Walking to trees";
             Rs2Walker.walkTo(willows);
             return;
         }
@@ -267,7 +240,7 @@ public class WoodcuttingTrainer implements SkillTrainer {
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Woodcutting";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -282,7 +255,8 @@ public class WoodcuttingTrainer implements SkillTrainer {
             return;
         }
 
-        GameObject tree = Rs2GameObject.findReachableObject("Willow tree", true, 10, willows);
+        GameObject tree = Rs2GameObject.findReachableObject("Willow", true, 10,
+                Rs2Player.getWorldLocation(), true, "Chop down");
         if (tree != null && Rs2GameObject.interact(tree)) {
             Microbot.status = "Woodcutting";
             waitingForAnim = true;

@@ -9,12 +9,11 @@ import net.runelite.client.plugins.microbot.util.gameobject.Rs2GameObject;
 import net.runelite.client.plugins.microbot.util.walker.Rs2Walker;
 import net.runelite.client.plugins.microbot.util.player.Rs2Player;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2Antiban;
+import java.util.Arrays;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
 import net.runelite.api.Skill;
 import net.runelite.client.plugins.microbot.randomtrainer.RandomTrainerScript;
-
-import static net.runelite.client.plugins.microbot.util.Global.sleep;
 
 public class MiningTrainer implements SkillTrainer {
     private final RandomTrainerScript script;
@@ -42,18 +41,30 @@ public class MiningTrainer implements SkillTrainer {
         int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
         int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
 
-        if (Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe"))) {
-            return true;
+        int bestIndex = PICKAXES.length - 1;
+        for (int i = 0; i < PICKAXES.length; i++) {
+            if (miningLevel >= MINING_REQ[i]) {
+                bestIndex = i;
+                break;
+            }
         }
 
+        int currentIndex = -1;
         for (int i = 0; i < PICKAXES.length; i++) {
             String name = PICKAXES[i];
-            if (Rs2Inventory.hasItem(name)) {
-                if (attackLevel >= ATTACK_REQ[i] && miningLevel >= MINING_REQ[i]) {
-                    Rs2Inventory.interact(name, "Wield");
-                }
-                return true;
+            if (Rs2Equipment.isWearing(eq -> eq.getName().equalsIgnoreCase(name)) || Rs2Inventory.hasItem(name)) {
+                currentIndex = i;
+                break;
             }
+        }
+
+        if (currentIndex != -1 && currentIndex <= bestIndex) {
+            final int idx = currentIndex;
+            if (!Rs2Equipment.isWearing(eq -> eq.getName().equalsIgnoreCase(PICKAXES[idx]))
+                    && attackLevel >= ATTACK_REQ[idx]) {
+                Rs2Inventory.interact(PICKAXES[idx], "Wield");
+            }
+            return true;
         }
 
         if (!Rs2Bank.isOpen()) {
@@ -62,10 +73,13 @@ public class MiningTrainer implements SkillTrainer {
             return false;
         }
 
-        for (int i = 0; i < PICKAXES.length; i++) {
-            if (miningLevel >= MINING_REQ[i] && Rs2Bank.hasItem(PICKAXES[i])) {
+        if (currentIndex != -1) {
+            Rs2Bank.depositAll(PICKAXES[currentIndex]);
+        }
+
+        for (int i = 0; i <= bestIndex; i++) {
+            if (Rs2Bank.hasItem(PICKAXES[i])) {
                 Microbot.status = "Withdrawing pickaxe";
-                Rs2Bank.depositAll();
                 Rs2Bank.withdrawItem(true, PICKAXES[i]);
                 if (attackLevel >= ATTACK_REQ[i]) {
                     Rs2Inventory.interact(PICKAXES[i], "Wield");
@@ -73,52 +87,19 @@ public class MiningTrainer implements SkillTrainer {
                 break;
             }
         }
-sleep(1000,3000);
+
         Rs2Bank.closeBank();
 
         return Rs2Equipment.isWearing(item -> item.getName().toLowerCase().contains("pickaxe")) ||
                 Rs2Inventory.contains(item -> item.getName().toLowerCase().contains("pickaxe"));
     }
 
-    private void upgradePickaxe() {
-        if (!Rs2Bank.isOpen()) return;
-
-        int miningLevel = Rs2Player.getRealSkillLevel(Skill.MINING);
-        int attackLevel = Rs2Player.getRealSkillLevel(Skill.ATTACK);
-
-        String bestPickaxe = null;
-        int bestIdx = -1;
-        for (int i = 0; i < PICKAXES.length; i++) {
-            if (miningLevel >= MINING_REQ[i] && attackLevel >= ATTACK_REQ[i] && Rs2Bank.hasItem(PICKAXES[i])) {
-                bestPickaxe = PICKAXES[i];
-                bestIdx = i;
-                break;
-            }
-        }
-
-        if (bestPickaxe == null) return;
-
-        if (Rs2Equipment.isWearing(bestPickaxe, true) || Rs2Inventory.hasItem(bestPickaxe)) {
-            return;
-        }
-
-        for (String axe : PICKAXES) {
-            if (Rs2Equipment.isWearing(axe, true)) {
-                Rs2Equipment.interact(axe, "Remove");
-                sleep(200, 600);
-            }
-        }
-
-        for (String axe : PICKAXES) {
-            Rs2Bank.depositAll(axe);
-        }
-
-        Rs2Bank.withdrawItem(true, bestPickaxe);
-        if (attackLevel >= ATTACK_REQ[bestIdx]) {
-            Rs2Inventory.interact(bestPickaxe, "Wield");
-        }
+    private void depositUncutGems() {
+        Rs2Bank.depositAll("Uncut diamond");
+        Rs2Bank.depositAll("Uncut ruby");
+        Rs2Bank.depositAll("Uncut emerald");
+        Rs2Bank.depositAll("Uncut sapphire");
     }
-
 
     public void trainLowLevelMining() {
         if (!ensurePickaxe()) {
@@ -129,15 +110,18 @@ sleep(1000,3000);
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
             if (Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.depositAllExcept(PICKAXES);
-                upgradePickaxe();
+                Rs2Bank.depositAll("tin ore");
+                Rs2Bank.depositAll("copper ore");
+                depositUncutGems();
+                ensurePickaxe();
+                Rs2Bank.closeBank();
             }
             return;
         }
 
         WorldPoint mine = new WorldPoint(3288, 3363, 0);
         if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
-            Microbot.status = "Walking to East mine";
+            Microbot.status = "Walking to mine";
             Rs2Walker.walkTo(mine);
             return;
         }
@@ -145,7 +129,7 @@ sleep(1000,3000);
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -195,28 +179,19 @@ sleep(1000,3000);
             return;
         }
 
-        WorldPoint depoport = new WorldPoint(3046, 3236, 0);
         if (Rs2Inventory.isFull()) {
-            if (Rs2Player.getWorldLocation().distanceTo(depoport) > 5) {
-                Microbot.status = "Walking to Deposit Box";
-                Rs2Walker.walkTo(depoport);
-                return;
+            Microbot.status = "Banking ore";
+            if (Rs2DepositBox.walkToAndUseDepositBox()) {
+                Rs2DepositBox.depositAllExcept(Arrays.asList("pickaxe"), false);
+                Rs2DepositBox.closeDepositBox();
             }
-            if (Rs2Inventory.isFull()) {
-                Microbot.status = "Banking ore";
-                if (Rs2DepositBox.walkToAndUseDepositBox()) {
-                    Rs2DepositBox.depositAllExcept(PICKAXES);
-                    sleep(1000, 3000);
-                    Rs2DepositBox.closeDepositBox();
-                }
-                return;
-            }
+            ensurePickaxe();
+            return;
         }
 
-
         WorldPoint mine = new WorldPoint(2970, 3239, 0);
-        if (Rs2Player.getWorldLocation().distanceTo(mine) > 20) {
-            Microbot.status = "Walking to Rimmington mine";
+        if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
+            Microbot.status = "Walking to mine";
             Rs2Walker.walkTo(mine);
             return;
         }
@@ -224,7 +199,7 @@ sleep(1000,3000);
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;
@@ -239,7 +214,7 @@ sleep(1000,3000);
             return;
         }
 
-        GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 30,
+        GameObject rock = Rs2GameObject.findReachableObject("Iron rocks", true, 10,
                 Rs2Player.getWorldLocation());
         if (rock != null && Rs2GameObject.interact(rock)) {
             Microbot.status = "Mining";
@@ -261,9 +236,12 @@ sleep(1000,3000);
         if (Rs2Inventory.isFull()) {
             Microbot.status = "Banking ore";
             if (Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.depositAllExcept(PICKAXES);
-                upgradePickaxe();
-                sleep(1000, 3000);
+                Rs2Bank.depositAll("coal");
+                Rs2Bank.depositAll("iron ore");
+                Rs2Bank.depositAll("copper ore");
+                Rs2Bank.depositAll("tin ore");
+                depositUncutGems();
+                ensurePickaxe();
                 Rs2Bank.closeBank();
             }
             return;
@@ -271,7 +249,7 @@ sleep(1000,3000);
 
         WorldPoint mine = new WorldPoint(3083, 3422, 0);
         if (Rs2Player.getWorldLocation().distanceTo(mine) > 5) {
-            Microbot.status = "Walking to Barbarian Village mine";
+            Microbot.status = "Walking to mine";
             Rs2Walker.walkTo(mine);
             return;
         }
@@ -279,7 +257,7 @@ sleep(1000,3000);
 
         if (waitingForAnim) {
             if (Rs2Player.isAnimating()) {
-                waitingForAnim = true;
+                waitingForAnim = false;
                 Microbot.status = "Mining";
             } else if (System.currentTimeMillis() - animWaitStart > 5000) {
                 waitingForAnim = false;

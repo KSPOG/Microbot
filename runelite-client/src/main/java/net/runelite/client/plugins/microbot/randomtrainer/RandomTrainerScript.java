@@ -14,20 +14,18 @@ import java.util.HashMap;
 // are mapped to their corresponding tasks within this script.
 import net.runelite.client.plugins.microbot.randomtrainer.MiningTrainer;
 import net.runelite.client.plugins.microbot.randomtrainer.WoodcuttingTrainer;
+import net.runelite.client.plugins.microbot.randomtrainer.FishingTrainer;
 import net.runelite.client.plugins.microbot.randomtrainer.SkillTrainer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
-
 
 @Singleton
 public class RandomTrainerScript extends Script {
     public static final String VERSION = "1.0.0";
-
 
     private RandomTrainerConfig config;
     private RandomTrainerPlugin plugin;
@@ -39,6 +37,7 @@ public class RandomTrainerScript extends Script {
 
     private MiningTrainer miningTrainer;
     private WoodcuttingTrainer woodcuttingTrainer;
+    private FishingTrainer fishingTrainer;
     private final Map<SkillTask, SkillTrainer> trainers = new HashMap<>();
 
     public boolean run(RandomTrainerConfig config, RandomTrainerPlugin plugin) {
@@ -51,10 +50,12 @@ public class RandomTrainerScript extends Script {
 
         miningTrainer = new MiningTrainer(this);
         woodcuttingTrainer = new WoodcuttingTrainer(this);
+        fishingTrainer = new FishingTrainer(this);
 
         trainers.clear();
         trainers.put(SkillTask.MINING, miningTrainer);
         trainers.put(SkillTask.WOODCUTTING, woodcuttingTrainer);
+        trainers.put(SkillTask.FISHING, fishingTrainer);
 
         Rs2Antiban.resetAntibanSettings();
         Rs2AntibanSettings.naturalMouse = true;
@@ -131,7 +132,6 @@ public class RandomTrainerScript extends Script {
         if (!idleForBreak) {
             if (Rs2Bank.walkToBankAndUseBank()) {
                 Rs2Bank.depositAll();
-                sleep(1000, 3000);
                 Rs2Bank.closeBank();
             }
             idleForBreak = true;
@@ -143,13 +143,11 @@ public class RandomTrainerScript extends Script {
         Microbot.status = "Walking to Bank";
         if (!Rs2Bank.isOpen()) {
             if (!Rs2Bank.walkToBankAndUseBank()) {
-                Rs2Bank.openBank();
-                sleep(1000, 3000);
-                Rs2Bank.depositAll();
                 return;
             }
         }
-        sleep(1000, 3000);
+        Rs2Bank.depositAll();
+        Rs2Bank.closeBank();
     }
 
     private void selectNewTask() {

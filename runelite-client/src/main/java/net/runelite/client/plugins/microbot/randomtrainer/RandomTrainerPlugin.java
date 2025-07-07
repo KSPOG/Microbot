@@ -10,7 +10,7 @@ import javax.inject.Inject;
 import java.awt.AWTException;
 
 @PluginDescriptor(
-        name = PluginDescriptor.KSP + "Random Trainer",
+        name = PluginDescriptor.Default + "Random Trainer",
         description = "Trains random skills",
         tags = {"random", "trainer", "microbot"},
         enabledByDefault = false
@@ -49,4 +49,5 @@ public class RandomTrainerPlugin extends Plugin {
     public boolean isBreakHandlerEnabled() {
         return net.runelite.client.plugins.microbot.Microbot.isPluginEnabled(net.runelite.client.plugins.microbot.breakhandler.BreakHandlerPlugin.class);
     }
+
 }
