@@ -1,5 +1,17 @@
 package net.runelite.client.plugins.microbot.f2pfishing;
 
+
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
+import net.runelite.client.ui.overlay.OverlayPosition;
+
+public class F2pFishingOverlay extends Overlay {
+	public F2pFishingOverlay() {
+		setPosition(OverlayPosition.BOTTOM_LEFT);
+		setLayer(OverlayLayer.ABOVE_WIDGETS);
+	}
+}
+
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.components.LineComponent;
 
@@ -47,3 +59,4 @@ public class F2pFishingOverlay extends OverlayPanel {
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 }
+
