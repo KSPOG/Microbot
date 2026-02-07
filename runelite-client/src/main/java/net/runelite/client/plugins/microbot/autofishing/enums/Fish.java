@@ -4,6 +4,7 @@ import net.runelite.api.ItemID;
 
 public enum Fish {
 	SHRIMP("Shrimp", ItemID.RAW_SHRIMPS, ItemID.SHRIMPS),
+
 	SHRIMP_AND_ANCHOVIES(
 		"Shrimp + Anchovies",
 		new int[]{ItemID.RAW_SHRIMPS, ItemID.RAW_ANCHOVIES},
@@ -30,6 +31,13 @@ public enum Fish {
 		new int[]{ItemID.RAW_TUNA, ItemID.RAW_SWORDFISH},
 		new int[]{ItemID.TUNA, ItemID.SWORDFISH}
 	),
+
+	ANCHOVIES("Anchovies", ItemID.RAW_ANCHOVIES, ItemID.ANCHOVIES),
+	SARDINE("Sardine", ItemID.RAW_SARDINE, ItemID.SARDINE),
+	HERRING("Herring", ItemID.RAW_HERRING, ItemID.HERRING),
+	TROUT("Trout", ItemID.RAW_TROUT, ItemID.TROUT),
+	SALMON("Salmon", ItemID.RAW_SALMON, ItemID.SALMON),
+
 	TUNA("Tuna", ItemID.RAW_TUNA, ItemID.TUNA),
 	LOBSTER("Lobster", ItemID.RAW_LOBSTER, ItemID.LOBSTER),
 	SWORDFISH("Swordfish", ItemID.RAW_SWORDFISH, ItemID.SWORDFISH);
@@ -37,6 +45,7 @@ public enum Fish {
 	private final String name;
 	private final int rawItemId;
 	private final int cookedItemId;
+
 	private final int[] rawItemIds;
 	private final int[] cookedItemIds;
 
@@ -50,6 +59,13 @@ public enum Fish {
 		this.cookedItemIds = cookedItemIds;
 		this.rawItemId = rawItemIds.length > 0 ? rawItemIds[0] : -1;
 		this.cookedItemId = cookedItemIds.length > 0 ? cookedItemIds[0] : -1;
+
+
+	Fish(String name, int rawItemId, int cookedItemId) {
+		this.name = name;
+		this.rawItemId = rawItemId;
+		this.cookedItemId = cookedItemId;
+
 	}
 
 	public String getName() {
@@ -64,6 +80,7 @@ public enum Fish {
 		return cookedItemId;
 	}
 
+
 	public int[] getRawItemIds() {
 		return rawItemIds.clone();
 	}
@@ -71,4 +88,5 @@ public enum Fish {
 	public int[] getCookedItemIds() {
 		return cookedItemIds.clone();
 	}
+
 }
