@@ -105,7 +105,7 @@ public class Rs2GroundItem {
             } else if (index == 4) {
                 menuAction = MenuAction.GROUND_ITEM_FIFTH_OPTION;
             }
-            LocalPoint localPoint1 = LocalPoint.fromWorld(Microbot.getClient(), groundItem.location);
+            LocalPoint localPoint1 = localPoint;
             if (localPoint1 != null) {
                 Polygon canvas = Perspective.getCanvasTilePoly(Microbot.getClient(), localPoint1);
                 if (canvas != null) {
@@ -187,7 +187,7 @@ public class Rs2GroundItem {
     }
 
     public static RS2Item[] getAll(int range) {
-        return getAllFromWorldPoint(range, Microbot.getClient().getLocalPlayer().getWorldLocation());
+        return getAllFromWorldPoint(range, Rs2Player.getWorldLocation());
     }
 
     /**
@@ -245,18 +245,27 @@ public class Rs2GroundItem {
     }
 
     public static boolean lootItemBasedOnValue(int value, int range) {
-         final RS2Item rs2Item = Arrays.stream(Rs2GroundItem.getAll(range))
-                .filter(item -> hasLineOfSight(item.getTile()))
-                .filter(item -> {
-                    final long totalPrice = (long) Microbot.getClientThread().runOnClientThreadOptional(() ->
-                            Microbot.getItemManager().getItemPrice(item.getItem().getId()) * item.getTileItem().getQuantity()).orElse(0);
-                    return totalPrice >= value;
-                }).findFirst().orElse(null);
+        RS2Item[] items = Rs2GroundItem.getAll(range);
+        final long[] prices = Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            long[] result = new long[items.length];
+            for (int i = 0; i < items.length; i++) {
+                result[i] = (long) Microbot.getItemManager().getItemPrice(items[i].getItem().getId()) * items[i].getTileItem().getQuantity();
+            }
+            return result;
+        }).orElse(new long[items.length]);
 
-         if (rs2Item == null) return false;
-         if (Rs2Inventory.isFull() && Rs2Player.eatAt(100)) Rs2Player.waitForAnimation();
-         if (!interact(rs2Item)) return false;
-         return Rs2Inventory.waitForInventoryChanges(5_000);
+        RS2Item rs2Item = null;
+        for (int i = 0; i < items.length; i++) {
+            if (hasLineOfSight(items[i].getTile()) && prices[i] >= value) {
+                rs2Item = items[i];
+                break;
+            }
+        }
+
+        if (rs2Item == null) return false;
+        if (Rs2Inventory.isFull() && Rs2Player.eatAt(100)) Rs2Player.waitForAnimation();
+        if (!interact(rs2Item)) return false;
+        return Rs2Inventory.waitForInventoryChanges(5_000);
     }
 
     /**
@@ -311,7 +320,8 @@ public class Rs2GroundItem {
 
 
     private static Predicate<GroundItem> baseRangeAndOwnershipFilter(LootingParameters params) {
-        final WorldPoint me = Microbot.getClient().getLocalPlayer().getWorldLocation();
+        final WorldPoint me = Rs2Player.getWorldLocation();
+        if (me == null) return gi -> false;
         final boolean anti = params.isAntiLureProtection();
         return gi ->
                 gi.getLocation().distanceTo(me) < params.getRange() &&
@@ -458,11 +468,19 @@ public class Rs2GroundItem {
     }
 
     public static boolean isItemBasedOnValueOnGround(int value, int range) {
-        return Arrays.stream(Rs2GroundItem.getAll(range)).anyMatch(rs2Item -> {
-            final long totalPrice = (long) Microbot.getClientThread().runOnClientThreadOptional(() ->
-                    Microbot.getItemManager().getItemPrice(rs2Item.getItem().getId()) * rs2Item.getTileItem().getQuantity()).orElse(0);
-            return totalPrice >= value;
-        });
+        RS2Item[] items = Rs2GroundItem.getAll(range);
+        final long[] prices = Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            long[] result = new long[items.length];
+            for (int i = 0; i < items.length; i++) {
+                result[i] = (long) Microbot.getItemManager().getItemPrice(items[i].getItem().getId()) * items[i].getTileItem().getQuantity();
+            }
+            return result;
+        }).orElse(new long[items.length]);
+
+        for (long price : prices) {
+            if (price >= value) return true;
+        }
+        return false;
     }
 
     @Deprecated(since = "1.4.6, use lootItemsBasedOnNames(LootingParameters params)", forRemoval = true)
@@ -543,7 +561,7 @@ public class Rs2GroundItem {
     public static boolean hasLineOfSight(Tile tile) {
         if (tile == null) return false;
         return tile.getWorldLocation().toWorldArea()
-                .hasLineOfSightTo(Microbot.getClient().getTopLevelWorldView(), Microbot.getClient().getLocalPlayer().getWorldLocation().toWorldArea());
+                .hasLineOfSightTo(Microbot.getClient().getTopLevelWorldView(), Rs2Player.getWorldLocation().toWorldArea());
     }
 
     /**

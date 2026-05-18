@@ -14,6 +14,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Orchestrates detection and execution of blocking events that must run before scripts continue.
+ * Maintains a prioritized list, periodically validates them with backoff, and runs at most one at a time on a dedicated executor.
+ */
 @Slf4j
 public class BlockingEventManager
 {
@@ -47,9 +51,6 @@ public class BlockingEventManager
         // single-threaded executor for running event.execute()
         this.blockingExecutor = Executors.newSingleThreadExecutor(threadFactory);
 
-        // scheduler for periodic validate() calls
-        startLoop();
-
         // pre-register core events
         blockingEvents.add(new WelcomeScreenEvent());
         blockingEvents.add(new DisableLevelUpInterfaceEvent());
@@ -59,8 +60,16 @@ public class BlockingEventManager
         blockingEvents.add(new PluginPauseEvent());
 		blockingEvents.add(new EnjoyRSChatboxEvent());
 		blockingEvents.add(new DisableWorldSwitcherConfirmationEvent());
+		blockingEvents.add(new HideRoofsEvent());
 
         sortBlockingEvents();
+    }
+
+    public synchronized void start() {
+        if (loopFuture != null && !loopFuture.isCancelled() && !loopFuture.isDone()) {
+            return;
+        }
+        startLoop();
     }
 
     public void shutdown() {
@@ -151,6 +160,10 @@ public class BlockingEventManager
      * If an event is already running, returns true immediately.
      * Otherwise poll the queue; if we get an event, mark running and execute.
      */
+    /**
+     * Returns {@code true} if a blocking event is currently running or one was dequeued and scheduled.
+     * Called from {@link net.runelite.client.plugins.microbot.Script#run()} to pause script loops until blockers finish.
+     */
     public boolean shouldBlockAndProcess()
     {
         if (isRunning.get())
@@ -167,7 +180,8 @@ public class BlockingEventManager
 
         if (!isRunning.compareAndSet(false, true))
         {
-            // if somebody else started in the meantime, we consider it “busy”
+            // Another thread started processing; re-queue so the event is not lost
+            eventQueue.offer(event);
             return true;
         }
 

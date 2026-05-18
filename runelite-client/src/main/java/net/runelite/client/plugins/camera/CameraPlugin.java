@@ -140,8 +140,9 @@ public class CameraPlugin extends Plugin implements KeyListener, MouseListener
 			Widget settingsInit = client.getWidget(InterfaceID.Settings.UNIVERSE);
 			if (settingsInit != null)
 			{
-				client.createScriptEvent(settingsInit.getOnLoadListener())
+				client.createScriptEventBuilder(settingsInit.getOnLoadListener())
 					.setSource(settingsInit)
+					.build()
 					.run();
 			}
 
@@ -176,8 +177,9 @@ public class CameraPlugin extends Plugin implements KeyListener, MouseListener
 			Widget settingsInit = client.getWidget(InterfaceID.Settings.UNIVERSE);
 			if (settingsInit != null)
 			{
-				client.createScriptEvent(settingsInit.getOnLoadListener())
+				client.createScriptEventBuilder(settingsInit.getOnLoadListener())
 					.setSource(settingsInit)
+					.build()
 					.run();
 			}
 
@@ -402,7 +404,7 @@ public class CameraPlugin extends Plugin implements KeyListener, MouseListener
 		{
 			case ScriptID.SETTINGS_SLIDER_CHOOSE_ONOP:
 			{
-				int arg = client.getIntStackSize() - 11;
+				int arg = client.getIntStackSize() - 12;
 				int[] is = client.getIntStack();
 
 				if (is[arg] == SettingID.CAMERA_ZOOM)

@@ -52,6 +52,36 @@ plugins {
 
 }
 
+tasks.register<JavaExec>("run") {
+    group = "application"
+    description = "Run RuneLite client"
+
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("net.runelite.client.RuneLite")
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-ea"
+    )
+}
+
+tasks.register<JavaExec>("seedMenuActionInfo") {
+    group = "verification"
+    description = "Generate src/main/resources/.../menu-action-info.properties from the injected-client jar. Re-run when the injected-client dependency bumps."
+
+    dependsOn(":client:compileJava")
+
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("net.runelite.client.plugins.microbot.util.reflection.MenuActionResourceSeeder")
+
+    val outputFile = file("src/main/resources/net/runelite/client/plugins/microbot/util/reflection/menu-action-info.properties")
+    args(outputFile.absolutePath)
+
+    doFirst {
+        outputFile.parentFile.mkdirs()
+    }
+}
+
 tasks.register<JavaExec>("runDebug") {
     group = "application"
     description = "Run RuneLite client with JDWP debug"
@@ -62,9 +92,27 @@ tasks.register<JavaExec>("runDebug") {
     // same JVM args you need normally
     jvmArgs(
         "-Dfile.encoding=UTF-8",
+        "-ea",
         // JDWP agent for debugger
         "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     )
+}
+
+tasks.register<JavaExec>("runTest") {
+    group = "verification"
+    description = "Run client in test mode — auto-login, enable target plugin, write results, exit"
+
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("net.runelite.client.RuneLite")
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-ea"
+    )
+
+    System.getProperties()
+        .filter { it.key.toString().startsWith("microbot.test.") }
+        .forEach { (k, v) -> jvmArgs("-D$k=$v") }
 }
 
 tasks.register<Test>("runDebugTests") {
@@ -105,6 +153,155 @@ tasks.register<Test>("runTests") {
     testLogging {
         events("passed", "skipped", "failed")
         showStandardStreams = true
+    }
+}
+
+tasks.register<Test>("runUnitTests") {
+    group = "verification"
+    description = "Run unit tests only (no client, no login) — safe for CI"
+
+    // ClientThreadGuardrailTest scans compiled .class files under runelite-{api,client}/build,
+    // so make sure the main sources are compiled before the test JVM forks.
+    dependsOn(":client:compileJava")
+
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Duser.timezone=Europe/Brussels",
+        "-ea"
+    )
+
+    // Forward the baseline-regenerate flags to the test JVM so contributors can run
+    // `./gradlew :client:runUnitTests -Dmicrobot.guardrail.regenerate-baseline=true` ad-hoc.
+    System.getProperty("microbot.guardrail.regenerate-baseline")?.let {
+        systemProperty("microbot.guardrail.regenerate-baseline", it)
+    }
+    System.getProperty("microbot.queryable-guardrail.regenerate-baseline")?.let {
+        systemProperty("microbot.queryable-guardrail.regenerate-baseline", it)
+    }
+
+    exclude("**/Rs2ActorModelIntegrationTest.class")
+    exclude("**/Rs2WalkerIntegrationTest.class")
+    exclude("**/Rs2ReflectionGroundItemActionsIntegrationTest.class")
+    exclude("**/threadsafety/ClientThreadScannerTest.class")
+    exclude("**/ScreenshotHandlerTest.class")
+
+    useJUnit()
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+tasks.register<Test>("regenerateClientThreadGuardrailBaseline") {
+    group = "verification"
+    description = "Regenerate src/test/resources/threadsafety/client-thread-guardrail-baseline.txt from current sources"
+
+    dependsOn(":client:compileJava", ":client:compileTestJava")
+
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Duser.timezone=Europe/Brussels",
+        "-Dmicrobot.guardrail.regenerate-baseline=true"
+    )
+
+    include("**/threadsafety/ClientThreadGuardrailTest.class")
+
+    useJUnit()
+    outputs.upToDateWhen { false }
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+tasks.register<Test>("regenerateQueryableTerminalBaseline") {
+    group = "verification"
+    description = "Regenerate src/test/resources/threadsafety/queryable-terminal-guardrail-baseline.txt from current sources"
+
+    dependsOn(":client:compileJava", ":client:compileTestJava")
+
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Duser.timezone=Europe/Brussels",
+        "-Dmicrobot.queryable-guardrail.regenerate-baseline=true"
+    )
+
+    include("**/threadsafety/QueryableTerminalGuardrailTest.class")
+
+    useJUnit()
+    outputs.upToDateWhen { false }
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+tasks.register<Test>("runClientThreadScanner") {
+    group = "verification"
+    description = "Manually scan compiled bytecode for client-thread markers and emit docs/client-thread-manifest.md"
+    enabled = true
+
+    dependsOn(":client:compileJava", ":client:compileTestJava")
+
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Duser.timezone=Europe/Brussels",
+        "-Dmicrobot.scanner.enabled=true"
+    )
+
+    include("**/threadsafety/ClientThreadScannerTest.class")
+
+    useJUnit()
+    outputs.upToDateWhen { false }
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+tasks.register<Test>("runIntegrationTest") {
+    group = "verification"
+    description = "Run Rs2ActorModel integration test with live client"
+    enabled = true
+
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Duser.timezone=Europe/Brussels",
+        "-ea"
+    )
+
+    include("**/Rs2ActorModelIntegrationTest.class")
+    include("**/Rs2WalkerIntegrationTest.class")
+
+    useJUnit()
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
 
@@ -227,6 +424,7 @@ val assemble = tasks.withType<net.runelite.gradle.assemble.AssembleTask> {
     scriptDirectory = file("src/main/scripts")
     outputDirectory = sourceSets.main.map { File(it.output.resourcesDir, "runelite") }
     componentsFile = file("../runelite-api/src/main/interfaces/interfaces.toml")
+    longSupport = true
 }
 
 tasks.withType<net.runelite.gradle.index.IndexTask> {
@@ -302,7 +500,9 @@ tasks.checkstyleMain {
 }
 
 tasks.withType<Test> {
-    enabled = false
+    if (name != "runIntegrationTest" && name != "runTests" && name != "runDebugTests" && name != "runUnitTests" && name != "runClientThreadScanner" && name != "regenerateClientThreadGuardrailBaseline" && name != "regenerateQueryableTerminalBaseline") {
+        enabled = false
+    }
     systemProperty("glslang.path", providers.gradleProperty("glslangPath").getOrElse(""))
 }
 

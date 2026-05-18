@@ -181,8 +181,7 @@ public class ClientUI
 		Provider<ClientThread> clientThreadProvider,
 		EventBus eventBus,
 		@Named("safeMode") boolean safeMode,
-		@Named("runelite.title") String title,
-		@Named("microbot.version") String version
+		@Named("runelite.title") String title
 	)
 	{
 		this.config = config;
@@ -192,7 +191,7 @@ public class ClientUI
 		this.clientThreadProvider = clientThreadProvider;
 		this.eventBus = eventBus;
 		this.safeMode = safeMode;
-		this.title = title + (safeMode ? " (safe mode)" : " V" + version) + " " + proxyMessage;
+		this.title = title + (safeMode ? " (safe mode)" : "");
 
 		normalBoundsTimer = new Timer(250, _ev -> setLastNormalBounds());
 		normalBoundsTimer.setRepeats(false);
@@ -533,6 +532,7 @@ public class ClientUI
 					.icon(consoleIconClosed)
 					.tooltip("Show console")
 					.onClick(this::toggleConsole)
+					.popup(Map.of("Clear", () -> consolePanel.clear()))
 					.build(), false);
 			updateConsoleToggleButton();
 
@@ -615,7 +615,7 @@ public class ClientUI
 						configManager.setConfiguration(QuestHelperConfig.QUEST_HELPER_GROUP, "TurnOn", !isEnabled);
 						questHelperNavBtn.setIcon(new ImageIcon(!isEnabled ? questIconOn : questIconOff ));
 						questHelperNavBtn.setToolTipText(!isEnabled ? "Disable 'Semi-Auto' Questing" : "Enable 'Semi-Auto' Questing");
-						if (isEnabled) Rs2Walker.setTarget(null);
+						if (isEnabled) Rs2Walker.clearWalkingRoute("client-ui:quest-helper-toggle-disable");
 					})
 					.build(), false
 			);

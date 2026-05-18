@@ -163,14 +163,11 @@ public class Rs2Npc {
             return Collections.emptyList();
         }
         
-        LocalPoint playerLocation = localPlayer.getLocalLocation();
-        
         return getNpcsForPlayer(x -> {
             String npcName = x.getName();
             if (npcName == null || npcName.isEmpty()) return false;
             return (exact ? npcName.equalsIgnoreCase(name) : npcName.toLowerCase().contains(name.toLowerCase()));
-        }).sorted(Comparator.comparingInt(value -> value.getLocalLocation().distanceTo(playerLocation)))
-          .collect(Collectors.toList());
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -380,10 +377,7 @@ public class Rs2Npc {
      */
     public static Stream<Rs2NpcModel> getAttackableNpcs() {
         return getNpcs(npc -> npc.getCombatLevel() > 0 && !npc.isDead())
-                .filter(npc -> Rs2Player.isInMulti() || !npc.isInteracting())
-                .sorted(Comparator.comparingInt(value ->
-                        value.getLocalLocation().distanceTo(
-                                Microbot.getClient().getLocalPlayer().getLocalLocation())));
+                .filter(npc -> Rs2Player.isInMulti() || !npc.isInteracting());
     }
 
     /**
@@ -404,15 +398,17 @@ public class Rs2Npc {
      * @return A sorted {@link Stream} of {@link Rs2NpcModel} objects that the player can attack.
      */
     public static Stream<Rs2NpcModel> getAttackableNpcs(boolean reachable) {
-        Rs2WorldPoint playerLocation = new Rs2WorldPoint(Microbot.getClient().getLocalPlayer().getWorldLocation());
+        Rs2WorldPoint playerLocation = new Rs2WorldPoint(Rs2Player.getWorldLocation());
 
-        return getNpcs(npc -> npc.getCombatLevel() > 0
+        Stream<Rs2NpcModel> npcs = getNpcs(npc -> npc.getCombatLevel() > 0
                 && !npc.isDead()
-                && (!reachable || playerLocation.distanceToPath(npc.getWorldLocation()) < Integer.MAX_VALUE)
-                && (!npc.isInteracting() || Objects.equals(npc.getInteracting(), Microbot.getClient().getLocalPlayer())))
-                .sorted(Comparator.comparingInt(value ->
-                        value.getLocalLocation().distanceTo(
-                                Microbot.getClient().getLocalPlayer().getLocalLocation())));
+                && (!npc.isInteracting() || Objects.equals(npc.getInteracting(), Microbot.getClient().getLocalPlayer())));
+
+        if (reachable) {
+            npcs = npcs.filter(npc -> playerLocation.distanceToPath(npc.getWorldLocation()) < Integer.MAX_VALUE);
+        }
+
+        return npcs;
     }
 
     /**
@@ -1115,7 +1111,7 @@ public class Rs2Npc {
      */
     @Deprecated(since = "1.7.2", forRemoval = true)
     public static List<Rs2NpcModel> getNpcsAttackingPlayer(Player player) {
-        return getNpcs(x -> x.getInteracting() != null && Objects.equals(x.getInteracting(), player) && x.isDead())
+        return getNpcs(x -> x.getInteracting() != null && Objects.equals(x.getInteracting(), player) && !x.isDead())
                 .collect(Collectors.toList());
     }
 
@@ -1218,13 +1214,16 @@ public class Rs2Npc {
      * @return The nearest {@link Rs2NpcModel} that has the specified action, or {@code null} if none are found.
      */
     public static Rs2NpcModel getNearestNpcWithAction(String action) {
-        Rs2WorldPoint playerLocation = new Rs2WorldPoint(Microbot.getClient().getLocalPlayer().getWorldLocation());
+        Rs2WorldPoint playerLocation = new Rs2WorldPoint(Rs2Player.getWorldLocation());
         boolean isInstance = Microbot.getClient().getTopLevelWorldView().getScene().isInstance();
         return getNpcs()
                 .filter(value -> value.getComposition() != null
                         && value.getComposition().getActions() != null
                         && Arrays.asList(value.getComposition().getActions()).contains(action))
-                .min(Comparator.comparingInt(value -> playerLocation.distanceToPath(isInstance ? Rs2WorldPoint.toLocalInstance(value.getWorldLocation()) : value.getWorldLocation())))
+                .min(Comparator.comparingInt(value -> {
+                    WorldPoint wp = isInstance ? Rs2WorldPoint.toLocalInstance(value.getWorldLocation()) : value.getWorldLocation();
+                    return wp == null ? Integer.MAX_VALUE : Rs2WorldPoint.quickDistance(playerLocation.getWorldPoint(), wp);
+                }))
                 .orElse(null);
     }
 

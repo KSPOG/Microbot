@@ -25,6 +25,7 @@
 package net.runelite.client.plugins.microbot.ui;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.html.HtmlEscapers;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.Config;
@@ -178,16 +179,14 @@ public class MicrobotPluginListPanel extends MicrobotPluginPanel {
         Predicate<Plugin> isMicrobotPlugin = plugin ->
                 plugin.getClass().getPackage().getName().toLowerCase().contains("microbot");
 
-        // Might add a different check later if needed, but for now, we consider external plugins as those
-        Predicate<Plugin> isExternalPlugin = plugin ->
-                plugin.getClass().getAnnotation(PluginDescriptor.class).isExternal();
-
         // populate pluginList with all non-hidden plugins
         pluginList = Stream.concat(
                         fakePlugins.stream(),
                         pluginManager.getPlugins().stream()
-                                .filter(plugin -> !plugin.getClass().getAnnotation(PluginDescriptor.class).hidden())
-                                .filter(isMicrobotPlugin.or(isExternalPlugin))
+                                .filter(plugin -> {
+                                    PluginDescriptor d = plugin.getClass().getAnnotation(PluginDescriptor.class);
+                                    return !d.hidden() && (isMicrobotPlugin.test(plugin) || d.isExternal());
+                                })
                                 .map(plugin ->
                                 {
                                     PluginDescriptor descriptor = plugin.getClass().getAnnotation(PluginDescriptor.class);
@@ -282,6 +281,9 @@ public class MicrobotPluginListPanel extends MicrobotPluginPanel {
     }
 
     void startPlugin(Plugin plugin) {
+        microbotPluginManager.getOutdatedPluginUpdate(plugin)
+                .ifPresent(this::showOutdatedPluginNotification);
+
         pluginManager.setPluginEnabled(plugin, true);
 
         try {
@@ -309,6 +311,25 @@ public class MicrobotPluginListPanel extends MicrobotPluginPanel {
         }
 
         return Text.fromCSV(config);
+    }
+
+    private void showOutdatedPluginNotification(MicrobotPluginManager.OutdatedPluginUpdate outdatedPluginUpdate) {
+        String message = "<html>\""
+                + HtmlEscapers.htmlEscaper().escape(outdatedPluginUpdate.getDisplayName())
+                + "\" is out of date.<br><br>Installed version: "
+                + HtmlEscapers.htmlEscaper().escape(outdatedPluginUpdate.getInstalledVersion())
+                + "<br>Latest version: "
+                + HtmlEscapers.htmlEscaper().escape(outdatedPluginUpdate.getLatestVersion())
+                + "<br><br>Update it from the <strong>Microbot Plugin Hub</strong> to get the latest fixes.</html>";
+
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                "Microbot Plugin Update Available",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+
+        microbotPluginManager.rememberOutdatedPluginUpdateNotification(outdatedPluginUpdate);
     }
 
     void savePinnedPlugins() {
