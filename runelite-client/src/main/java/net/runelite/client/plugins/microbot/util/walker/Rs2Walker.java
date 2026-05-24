@@ -188,6 +188,7 @@ public class Rs2Walker {
     /** Post-travel poll/timeout for Spirit Tree, Quetzal, glider, fairy ring, and other same-plane landing waits. */
     private static final int TRANSPORT_LANDING_WAIT_POLL_MS = 100;
     private static final int TRANSPORT_LANDING_WAIT_TIMEOUT_MS = 12_000;
+    private static final int HOME_TELEPORT_LANDING_WAIT_TIMEOUT_MS = 35_000;
 
     /** Ship / charter / glider — landing predicate uses {@link #isPlayerWithinChebyshevOf} with this exclusive bound. */
     private static final int TRANSPORT_NEAR_LANDING_CHEBYSHEV = 10;
@@ -3765,7 +3766,7 @@ public class Rs2Walker {
                     if (!(o instanceof WallObject) && !(o instanceof GameObject)) return false;
                     if (isCatalogTransportObject(o)) return false;
                     if (!isDoorOnSegment(o, fromWp, toWp)) return false;
-                    ObjectComposition comp = Rs2GameObject.convertToObjectComposition(o);
+                    ObjectComposition comp = resolveCompositionForDoorProbe(o);
                     if (!isDoorComposition(comp, doorActions)) return false;
                     return true;
                 }, playerLoc, searchDistance).stream()
@@ -3780,7 +3781,7 @@ public class Rs2Walker {
             return false;
         }
 
-        ObjectComposition comp = Rs2GameObject.convertToObjectComposition(object);
+        ObjectComposition comp = resolveCompositionForDoorProbe(object);
         if (!isDoorComposition(comp, doorActions)) return false;
 
         String action = getDoorAction(comp, doorActions);
@@ -3798,7 +3799,7 @@ public class Rs2Walker {
                 log.info("Found WallObject door - name {} with action {} at {} - from {} to {}", name, action, probe, fromWp, toWp);
                 found = true;
             }
-        } else if (name != null && name.toLowerCase().contains("door")) {
+        } else if (isDoorLikeGameObjectName(name)) {
             if (isDoorOnSegment(object, fromWp, toWp)) {
                 log.info("Found GameObject door - name {} with action {} at {} - from {} to {}", name, action, probe, fromWp, toWp);
                 found = true;
@@ -3887,7 +3888,7 @@ public class Rs2Walker {
         if (object == null) {
             return false;
         }
-        ObjectComposition composition = Rs2GameObject.convertToObjectComposition(object);
+        ObjectComposition composition = resolveCompositionForDoorProbe(object);
         String currentAction = getDoorAction(composition, doorActions);
         return currentAction != null && currentAction.equalsIgnoreCase(action);
     }
@@ -4317,7 +4318,7 @@ public class Rs2Walker {
     }
 
     private static boolean isDoorComposition(ObjectComposition comp, List<String> doorActions) {
-        if (comp == null || comp.getImpostorIds() != null || comp.getName().equals("null") || comp.getActions() == null) {
+        if (comp == null || isNullOrPlaceholderObjectName(comp.getName()) || comp.getActions() == null) {
             return false;
         }
         return getDoorAction(comp, doorActions) != null;
@@ -5861,12 +5862,14 @@ public class Rs2Walker {
 
                     if (transport.getType() == TransportType.TELEPORTATION_SPELL) {
                         if (attemptObserved(transport, () -> handleTeleportSpell(transport))) {
-                            if (isLumbridgeHomeTeleport(transport)) {
-                                sleepUntilTrue(() -> isPlayerWithinChebyshevOf(transport.getDestination(), OFFSET), 600, 35000);
-                            } else {
-                                sleepUntil(() -> !Rs2Player.isAnimating());
-                                sleepUntilTrue(() -> isPlayerWithinChebyshevOf(transport.getDestination(), OFFSET),
-                                        TRANSPORT_LANDING_WAIT_POLL_MS, TRANSPORT_LANDING_WAIT_TIMEOUT_MS);
+                            boolean landed = waitForTeleportSpellLanding(transport);
+                            if (!landed) {
+                                WebWalkLog.spWarn(
+                                        "teleport spell landing wait timed out dest={} at={} display={}",
+                                        compactWorldPoint(transport.getDestination()),
+                                        compactWorldPoint(Rs2Player.getWorldLocation()),
+                                        transport.getDisplayInfo());
+                                return false;
                             }
                             Rs2Tab.switchTo(InterfaceTab.INVENTORY);
                             return finishHandledTransport(transport);
@@ -6513,29 +6516,57 @@ public class Rs2Walker {
     }
 
     private static boolean handleTeleportSpell(Transport transport) {
-        if (Rs2Pvp.isInWilderness() && (Rs2Pvp.getWildernessLevelFrom(Rs2Player.getWorldLocation()) > (transport.getMaxWildernessLevel() + 1))) return false;
-        boolean hasMultipleDestination = transport.getDisplayInfo().contains(":");
+        if (transport == null || transport.getDisplayInfo() == null) {
+            return false;
+        }
+
+        WorldPoint playerLocation = Rs2Player.getWorldLocation();
+        if (Rs2Pvp.isInWilderness() && playerLocation != null
+                && Rs2Pvp.getWildernessLevelFrom(playerLocation) > (transport.getMaxWildernessLevel() + 1)) {
+            return false;
+        }
+
+        String[] spellParts = transport.getDisplayInfo().split(":", 2);
+        boolean hasMultipleDestination = spellParts.length > 1;
 
         String spellName = hasMultipleDestination
-                ? transport.getDisplayInfo().split(":")[0].trim().toLowerCase()
-                : transport.getDisplayInfo().toLowerCase();
+                ? spellParts[0].trim().toLowerCase(Locale.ROOT)
+                : transport.getDisplayInfo().trim().toLowerCase(Locale.ROOT);
 
         String option = hasMultipleDestination
-                ? transport.getDisplayInfo().split(":")[1].trim().toLowerCase()
+                ? spellParts[1].trim().toLowerCase(Locale.ROOT)
                 : "cast";
 
         int identifier = hasMultipleDestination
                 ? 2
                 : 1;
 
-        MagicAction magicSpell = Arrays.stream(MagicAction.values()).filter(x -> x.getName().toLowerCase().contains(spellName)).findFirst().orElse(null);
+        MagicAction magicSpell = Arrays.stream(MagicAction.values())
+                .filter(x -> x.getName().toLowerCase(Locale.ROOT).contains(spellName))
+                .findFirst()
+                .orElse(null);
         if (magicSpell != null) {
-            if (magicSpell == MagicAction.LUMBRIDGE_HOME_TELEPORT) {
-                return Rs2Magic.quickCast(magicSpell);
-            }
             return Rs2Magic.cast(magicSpell, option, identifier);
         }
         return false;
+    }
+
+    private static boolean waitForTeleportSpellLanding(Transport transport) {
+        int timeout = isLumbridgeHomeTeleport(transport)
+                ? HOME_TELEPORT_LANDING_WAIT_TIMEOUT_MS
+                : TRANSPORT_LANDING_WAIT_TIMEOUT_MS;
+        int poll = isLumbridgeHomeTeleport(transport)
+                ? 600
+                : TRANSPORT_LANDING_WAIT_POLL_MS;
+
+        if (!isLumbridgeHomeTeleport(transport)) {
+            sleepUntil(() -> !Rs2Player.isAnimating());
+        }
+
+        return sleepUntilTrue(
+                () -> isPlayerWithinChebyshevOf(transport.getDestination(), OFFSET),
+                poll,
+                timeout);
     }
 
     private static boolean isLumbridgeHomeTeleport(Transport transport) {

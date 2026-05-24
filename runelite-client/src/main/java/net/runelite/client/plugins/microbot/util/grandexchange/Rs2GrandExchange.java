@@ -60,6 +60,8 @@ public class Rs2GrandExchange {
     private static final String WIKI_API_URL = "https://prices.runescape.wiki/api/v1/osrs/latest?id=";
     private static final String WIKI_TIMESERIES_URL = "https://prices.runescape.wiki/api/v1/osrs/timeseries";
     private static final String WIKI_MAPPING_URL = "https://prices.runescape.wiki/api/v1/osrs/mapping";
+    private static final int PRICE_TO_QUANTITY_DELAY_MIN_MS = 650;
+    private static final int PRICE_TO_QUANTITY_DELAY_MAX_MS = 1200;
 
     // Caches for different data types
     private static final Map<Integer, WikiPrice> priceCache = new ConcurrentHashMap<>();
@@ -228,6 +230,7 @@ public class Rs2GrandExchange {
                 if (request.getPercent() != 0) {
                     adjustPriceByPercent(request.getPercent());
                 }
+                sleepAfterPriceEntry();
                 if (!setQuantity(request.getQuantity())) {
                     //failed to set quantity
                     return false;
@@ -252,6 +255,7 @@ public class Rs2GrandExchange {
                     adjustPriceByPercent(request.getPercent());
                 }
                 if (request.getQuantity() > 0) {
+                    sleepAfterPriceEntry();
                     if (!setQuantity(request.getQuantity())) {
                         //failed to set quantity
                         return false;
@@ -629,6 +633,10 @@ public class Rs2GrandExchange {
             Rs2Keyboard.enter();
             sleep(1000);
         }
+    }
+
+    private static void sleepAfterPriceEntry() {
+        sleep(PRICE_TO_QUANTITY_DELAY_MIN_MS, PRICE_TO_QUANTITY_DELAY_MAX_MS);
     }
 
     /**

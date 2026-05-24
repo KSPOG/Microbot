@@ -67,7 +67,9 @@ public class Rs2Player {
     public static int moonlightTime = -1;
     public static Instant lastAnimationTime = null;
     private static final long COMBAT_TIMEOUT_MS = 10000;
+    private static final long INTERACTION_STALE_MS = 2500;
     private static long lastCombatTime = 0;
+    private static long lastRealInteractionTime = 0;
     @Getter
     public static int lastAnimationID = AnimationID.IDLE;
 
@@ -140,7 +142,7 @@ public class Rs2Player {
     public static boolean hasStaminaBuffActive() {
         return staminaBuffTime > 0;
     }
-    
+
     public static boolean isTeleBlocked() {
         return teleBlockTime > 0;
     }
@@ -190,7 +192,7 @@ public class Rs2Player {
             }
         }
     }
-    
+
     /**
      * Handles updates to the teleblock timer based on changes to the {@link Varbits#TELEBLOCK} varbit.
      *
@@ -199,7 +201,7 @@ public class Rs2Player {
     public static void handleTeleblockTimer(VarbitChanged event){
         if (event.getVarbitId() == Varbits.TELEBLOCK) {
             int time = event.getValue();
-            
+
             if (time < 101) {
                 teleBlockTime = -1;
             } else {
@@ -371,15 +373,91 @@ public class Rs2Player {
     }
 
     /**
-     * Checks if the player is currently interacting with another entity (NPC, player, or object).
+     * Checks if the player is currently idle.
      *
-     * @return {@code true} if the player is interacting with another entity, {@code false} otherwise.
+     * <p>Do not trust {@link Actor#getInteracting()} by itself. RuneLite/OSRS can keep the
+     * previous interacting actor reference around for a short time after the action has ended.
+     * This method therefore only treats an interaction as active when it still looks meaningful,
+     * then lets stale interaction references expire after {@link #INTERACTION_STALE_MS}.</p>
+     *
+     * @return {@code true} if the player is not moving, not animating, and has no recent valid interaction activity.
      */
-    public static boolean isInteracting() {
-        if (Microbot.getClient().getLocalPlayer() == null) {
+    public static boolean isIdle() {
+        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            if (client == null) {
+                return true;
+            }
+
+            Player localPlayer = client.getLocalPlayer();
+            if (localPlayer == null) {
+                return true;
+            }
+
+            boolean recentlyAnimated = lastAnimationTime != null
+                    && Duration.between(lastAnimationTime, Instant.now()).toMillis() < 600;
+            boolean animating = recentlyAnimated || localPlayer.getAnimation() != AnimationID.IDLE;
+            boolean moving = localPlayer.getPoseAnimation() != localPlayer.getIdlePoseAnimation();
+
+            Actor interactingActor = localPlayer.getInteracting();
+            boolean validInteractionTarget = isValidInteractionTarget(interactingActor);
+            boolean meaningfulInteraction = isMeaningfulInteraction(localPlayer, interactingActor, moving, animating);
+
+            if (validInteractionTarget && meaningfulInteraction) {
+                lastRealInteractionTime = System.currentTimeMillis();
+            }
+
+            boolean recentlyInteracting = validInteractionTarget
+                    && System.currentTimeMillis() - lastRealInteractionTime < INTERACTION_STALE_MS;
+
+            return !moving && !animating && !recentlyInteracting;
+        }).orElse(true);
+    }
+
+    /**
+     * Checks if an interaction target is still valid.
+     *
+     * <p>This removes the most common stale targets, especially dead NPCs, while still allowing
+     * player interactions and live NPC interactions to be treated as valid.</p>
+     */
+    private static boolean isValidInteractionTarget(Actor actor) {
+        if (actor == null || actor.getWorldLocation() == null) {
             return false;
         }
-        return Optional.of(Microbot.getClient().getLocalPlayer().isInteracting()).orElse(false);
+
+        if (actor instanceof NPC) {
+            NPC npc = (NPC) actor;
+            return !npc.isDead() && npc.getHealthRatio() != 0;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks whether the current interaction should refresh the interaction timer.
+     *
+     * <p>Movement and animation are the strongest signals. Health bars are also treated as
+     * meaningful because combat has delays between attack animations.</p>
+     */
+    private static boolean isMeaningfulInteraction(Player localPlayer, Actor interactingActor, boolean moving, boolean animating) {
+        if (moving || animating) {
+            return true;
+        }
+
+        if (localPlayer.getHealthRatio() != -1) {
+            return true;
+        }
+
+        return interactingActor != null && interactingActor.getHealthRatio() > 0;
+    }
+
+    /**
+     * Checks if the player is currently busy.
+     *
+     * @return {@code true} if the player is moving, animating, or has an active interaction target.
+     */
+    public static boolean isInteracting() {
+        return !isIdle();
     }
 
     /**
@@ -481,7 +559,7 @@ public class Rs2Player {
      * @return {@code true} if the player logged out, {@code false} otherwise.
      */
     public static boolean logoutIfPlayerDetected(int amountOfPlayers, int time, int distance) {
-        List<Rs2PlayerModel> players = getPlayers(player -> true).collect(Collectors.toList());
+        List<Rs2PlayerModel> players = getCachedPlayers(false);
         long currentTime = System.currentTimeMillis();
 
         if (distance > 0) {
@@ -529,7 +607,7 @@ public class Rs2Player {
     }
 
     /**
-     * Logs out the player if a specified number of players are detected, 
+     * Logs out the player if a specified number of players are detected,
      * triggering an immediate logout upon detection.
      *
      * @param amountOfPlayers The number of players to detect before triggering a logout.
@@ -550,7 +628,7 @@ public class Rs2Player {
      * @return {@code true} if the player detected and successfully hopped worlds, {@code false} otherwise.
      */
     public static boolean hopIfPlayerDetected(int amountOfPlayers, int time, int distance) {
-        List<Rs2PlayerModel> players = getPlayers(player -> true).collect(Collectors.toList());
+        List<Rs2PlayerModel> players = getCachedPlayers(false);
         long currentTime = System.currentTimeMillis();
 
         if (distance > 0) {
@@ -628,11 +706,11 @@ public class Rs2Player {
         List<Rs2ItemModel> foods = Rs2Inventory.getInventoryFastFood();
         if (foods.isEmpty()) return false;
 
-		Optional<Rs2ItemModel> fastFood = foods.stream().findFirst();
+        Optional<Rs2ItemModel> fastFood = foods.stream().findFirst();
 
-		fastFood.ifPresent(rs2ItemModel -> Rs2Inventory.interact(rs2ItemModel, "eat"));
-		return true;
-	}
+        fastFood.ifPresent(rs2ItemModel -> Rs2Inventory.interact(rs2ItemModel, "eat"));
+        return true;
+    }
 
     /**
      * Finds and consumes the best available food item from the player's inventory.
@@ -684,7 +762,7 @@ public class Rs2Player {
      * @param predicate A condition to filter players (optional).
      * @return A stream of Rs2PlayerModel objects representing nearby players.
      */
-    @Deprecated(since = "2.1.0 - Use Rs2PlayerCache/Rs2PlayerQueryable", forRemoval = true)
+    @Deprecated(since = "2.1.0 - Use Microbot.getRs2PlayerCache().query()/getStream()", forRemoval = true)
     public static Stream<Rs2PlayerModel> getPlayers(Predicate<Rs2PlayerModel> predicate) {
         return getPlayers(predicate, false);
     }
@@ -696,18 +774,63 @@ public class Rs2Player {
      * @param includeLocalPlayer a flag on whether to include the local player within the stream
      * @return A stream of Rs2PlayerModel objects representing nearby players.
      */
-    @Deprecated(since = "2.1.0 - Use Rs2PlayerCache/Rs2PlayerQueryable", forRemoval = true)
+    @Deprecated(since = "2.1.0 - Use Microbot.getRs2PlayerCache().query()/getStream()", forRemoval = true)
     public static Stream<Rs2PlayerModel> getPlayers(Predicate<Rs2PlayerModel> predicate, boolean includeLocalPlayer) {
-        List<Rs2PlayerModel> players = Optional.of(Microbot.getClient().getTopLevelWorldView().players()
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .map(Rs2PlayerModel::new)
-                        .filter(x -> includeLocalPlayer || x.getPlayer() != Microbot.getClient().getLocalPlayer())
-                        .filter(predicate)
-                        .collect(Collectors.toList())
-        ).orElse(new ArrayList<>());
+        return getCachedPlayers(includeLocalPlayer).stream()
+                .filter(predicate);
+    }
 
-        return players.stream();
+    private static List<Rs2PlayerModel> getCachedPlayers(boolean includeLocalPlayer) {
+        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            if (client == null || client.getLocalPlayer() == null || Microbot.getRs2PlayerCache() == null) {
+                return Collections.<Rs2PlayerModel>emptyList();
+            }
+
+            Player localPlayer = client.getLocalPlayer();
+
+            /*
+             * Latest Microbot API:
+             * - Do not pull players directly from Client/WorldView.
+             * - Use Microbot.getRs2PlayerCache().getStream() or .query().
+             *
+             * This util class keeps the legacy util.player.Rs2PlayerModel return type for
+             * backwards compatibility, so cached API player models are unwrapped back to Player
+             * and wrapped into the existing util model where needed.
+             */
+            return Microbot.getRs2PlayerCache()
+                    .getStream()
+                    .filter(Objects::nonNull)
+                    .map(Rs2Player::toLegacyPlayerModel)
+                    .filter(Objects::nonNull)
+                    .filter(player -> includeLocalPlayer || player.getPlayer() != localPlayer)
+                    .collect(Collectors.toList());
+        }).orElse(Collections.emptyList());
+    }
+
+    /**
+     * Converts the latest cache-backed API player model into this utility class' legacy
+     * {@link Rs2PlayerModel} wrapper without exposing a breaking return type change.
+     */
+    private static Rs2PlayerModel toLegacyPlayerModel(Object cachedPlayer) {
+        if (cachedPlayer == null) {
+            return null;
+        }
+
+        if (cachedPlayer instanceof Rs2PlayerModel) {
+            return (Rs2PlayerModel) cachedPlayer;
+        }
+
+        if (cachedPlayer instanceof net.runelite.client.plugins.microbot.api.player.models.Rs2PlayerModel) {
+            Player player = ((net.runelite.client.plugins.microbot.api.player.models.Rs2PlayerModel) cachedPlayer).getPlayer();
+            return player == null ? null : new Rs2PlayerModel(player);
+        }
+
+        if (cachedPlayer instanceof Player) {
+            return new Rs2PlayerModel((Player) cachedPlayer);
+        }
+
+        return null;
     }
 
     /**
@@ -720,7 +843,8 @@ public class Rs2Player {
      */
     @Deprecated(since = "2.1.0 - Use Rs2PlayerCache/Rs2PlayerQueryable", forRemoval = true)
     public static Rs2PlayerModel getPlayer(String playerName, boolean exact) {
-        return getPlayers(player -> {
+        return getCachedPlayers(false).stream()
+                .filter(player -> {
             String name = player.getName();
             if (name == null) return false;
             return exact ? name.equalsIgnoreCase(playerName) : name.toLowerCase().contains(playerName.toLowerCase());
@@ -746,13 +870,15 @@ public class Rs2Player {
      */
     @Deprecated(since = "2.1.0 - Use Rs2PlayerCache/Rs2PlayerQueryable", forRemoval = true)
     public static List<Rs2PlayerModel> getPlayersInCombat() {
-        return getPlayers(player -> player.getHealthRatio() != -1).collect(Collectors.toList());
+        return getCachedPlayers(false).stream()
+                .filter(player -> player.getHealthRatio() != -1)
+                .collect(Collectors.toList());
     }
 
     /**
      * Calculates the player's health as a percentage.
      *
-     * <p>The method retrieves the player's health ratio and scale, then calculates 
+     * <p>The method retrieves the player's health ratio and scale, then calculates
      * the percentage based on these values.</p>
      *
      * <p><b>Note:</b> If health information is unavailable (i.e., missing or invalid values),
@@ -827,7 +953,7 @@ public class Rs2Player {
         return equipment.values().stream()
                 .anyMatch(equippedItemId -> equippedItemId == itemId);
     }
-    
+
     /**
      * Checks if a player has any of the specified items equipped by their item IDs.
      *
@@ -885,14 +1011,30 @@ public class Rs2Player {
     }
 
     /**
-     * Updates the last combat time when the player engages in or is hit during combat.
+     * Updates the last combat time only when there is a real combat signal.
+     *
+     * <p>Do not refresh combat state just because the local player exists.
+     * RuneLite/OSRS can keep stale interaction references around after combat ends,
+     * so this method requires a meaningful combat signal before extending the timer.</p>
      */
     public static void updateCombatTime() {
         Microbot.getClientThread().runOnClientThreadOptional(() -> {
-            Player localPlayer = Microbot.getClient().getLocalPlayer();
-            if (localPlayer != null) {
+            Client client = Microbot.getClient();
+            if (client == null) {
+                lastCombatTime = 0;
+                return null;
+            }
+
+            Player localPlayer = client.getLocalPlayer();
+            if (localPlayer == null) {
+                lastCombatTime = 0;
+                return null;
+            }
+
+            if (hasActiveCombatSignal(localPlayer)) {
                 lastCombatTime = System.currentTimeMillis();
             }
+
             return null;
         });
     }
@@ -902,20 +1044,105 @@ public class Rs2Player {
      * @return The local player wrapped in an {@link Rs2PlayerModel}.
      */
     public static Rs2PlayerModel getLocalPlayer() {
-        return getPlayers(player -> player.getId() == Microbot.getClient().getLocalPlayer().getId(), true).findFirst().orElse(null);
+        Player localPlayer = Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            return client == null ? null : client.getLocalPlayer();
+        }).orElse(null);
+
+        return localPlayer == null ? null : new Rs2PlayerModel(localPlayer);
     }
 
     /**
-     * Checks if the player is in combat based on recent activity.
+     * Checks if the player is in combat based on recent real combat activity.
      *
-     * @return True if the player is in combat, false otherwise.
+     * <p>This method also samples the current local player state. If a live combat
+     * signal is still visible, it refreshes the timeout. If the timeout has expired,
+     * it clears {@link #lastCombatTime} so stale combat state cannot remain active.</p>
+     *
+     * @return {@code true} if the player is in combat, {@code false} otherwise.
      */
     public static boolean isInCombat() {
-        return System.currentTimeMillis() - lastCombatTime < COMBAT_TIMEOUT_MS;
+        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            if (client == null) {
+                lastCombatTime = 0;
+                return false;
+            }
+
+            Player localPlayer = client.getLocalPlayer();
+            if (localPlayer == null) {
+                lastCombatTime = 0;
+                return false;
+            }
+
+            long now = System.currentTimeMillis();
+
+            if (hasActiveCombatSignal(localPlayer)) {
+                lastCombatTime = now;
+                return true;
+            }
+
+            if (lastCombatTime <= 0 || now - lastCombatTime >= COMBAT_TIMEOUT_MS) {
+                lastCombatTime = 0;
+                return false;
+            }
+
+            return true;
+        }).orElse(false);
     }
 
     /**
-     * Gets a list of Rs2PlayerModel objects representing players around the local player 
+     * Detects whether the local player currently has a meaningful combat signal.
+     *
+     * <p>Signals used:</p>
+     * <ul>
+     *     <li>The local player's health bar is visible.</li>
+     *     <li>The interacting actor is actively interacting back with the local player.</li>
+     *     <li>The local player is attacking/animating while a valid target exists.</li>
+     *     <li>The target has a visible health bar while the local player recently animated.</li>
+     * </ul>
+     */
+    private static boolean hasActiveCombatSignal(Player localPlayer) {
+        if (localPlayer == null) {
+            return false;
+        }
+
+        Actor interactingActor = localPlayer.getInteracting();
+        boolean validCombatTarget = isValidCombatTarget(interactingActor);
+
+        boolean localHealthBarVisible = localPlayer.getHealthRatio() != -1;
+        boolean targetInteractingWithLocal = validCombatTarget && interactingActor.getInteracting() == localPlayer;
+
+        boolean recentlyAnimated = lastAnimationTime != null
+                && Duration.between(lastAnimationTime, Instant.now()).toMillis() < 1200;
+        boolean localAnimating = recentlyAnimated || localPlayer.getAnimation() != AnimationID.IDLE;
+
+        boolean targetHealthBarVisible = validCombatTarget && interactingActor.getHealthRatio() > 0;
+
+        return localHealthBarVisible
+                || targetInteractingWithLocal
+                || (validCombatTarget && localAnimating)
+                || (targetHealthBarVisible && localAnimating);
+    }
+
+    /**
+     * Checks whether an actor can still be considered a valid combat target.
+     */
+    private static boolean isValidCombatTarget(Actor actor) {
+        if (actor == null || actor.getWorldLocation() == null) {
+            return false;
+        }
+
+        if (actor instanceof NPC) {
+            NPC npc = (NPC) actor;
+            return !npc.isDead() && npc.getHealthRatio() != 0;
+        }
+
+        return actor instanceof Player || actor.getHealthRatio() > 0;
+    }
+
+    /**
+     * Gets a list of Rs2PlayerModel objects representing players around the local player
      * within the combat level range and wilderness level where they can attack and be attacked.
      *
      * @return A list of Rs2PlayerModel objects within the combat range and attackable wilderness levels.
@@ -938,7 +1165,8 @@ public class Rs2Player {
         int localMinCombatLevel = Math.max(3, localCombatLevel - localWildernessLevel);
         int localMaxCombatLevel = Math.min(126, localCombatLevel + localWildernessLevel);
 
-        return getPlayers(player -> {
+        return getCachedPlayers(false).stream()
+                .filter(player -> {
             int playerCombatLevel = player.getCombatLevel();
             int playerWildernessLevel = Rs2Pvp.getWildernessLevelFrom(player.getWorldLocation());
 
@@ -954,59 +1182,73 @@ public class Rs2Player {
         });
     }
 
-	/**
-	 * Retrieves the player's current world location as a {@link WorldPoint} from the client thread.
-	 *
-	 * <p>If the player is in an instanced world, the method converts the local position
-	 * to an instanced {@link WorldPoint}. Otherwise, it returns the player's standard
-	 * world location.</p>
-	 *
-	 * @return The {@link WorldPoint} representing the player's current location, or {@code null} if unavailable.
-	 */
-	public static WorldPoint getWorldLocation_Internal(){
-		return Microbot.getClientThread().runOnClientThreadOptional(() -> {
-			if (Microbot.getClient().getTopLevelWorldView().getScene().isInstance()) {
-				LocalPoint l = LocalPoint.fromWorld(Microbot.getClient().getTopLevelWorldView(), Microbot.getClient().getLocalPlayer().getWorldLocation());
-				return WorldPoint.fromLocalInstance(Microbot.getClient(), l);
-			}
-			return Microbot.getClient().getLocalPlayer().getWorldLocation();
-		}).orElse(null);
-	}
+    /**
+     * Retrieves the player's current world location as a {@link WorldPoint} from the client thread.
+     *
+     * <p>If the player is in an instanced world, the method converts the local position
+     * to an instanced {@link WorldPoint}. Otherwise, it returns the player's standard
+     * world location.</p>
+     *
+     * @return The {@link WorldPoint} representing the player's current location, or {@code null} if unavailable.
+     */
+    public static WorldPoint getWorldLocation_Internal(){
+        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            if (client == null) {
+                return null;
+            }
 
-	/**
-	 * Retrieves the player's current {@link WorldView} from the client thread.
-	 *
-	 * @return The {@link WorldView} representing the player's current world view, or {@code null} if unavailable.
-	 */
-	public static WorldView getWorldView_Internal() {
-		return Microbot.getClientThread().runOnClientThreadOptional(() -> {
-			Player player = Microbot.getClient().getLocalPlayer();
-			if (player == null) return null;
-			return player.getWorldView();
-		}).orElse(null);
-	}
+            Player localPlayer = client.getLocalPlayer();
+            if (localPlayer == null || localPlayer.getWorldLocation() == null) {
+                return null;
+            }
 
-	/**
-	 * Retrieves the player's current world location as a {@link WorldPoint}.
-	 *
-	 * <p>If the player is in an instanced world, the method converts the local position
-	 * to an instanced {@link WorldPoint}. Otherwise, it returns the player's standard
-	 * world location.</p>
-	 *
-	 * @return The {@link WorldPoint} representing the player's current location.
-	 */
-	public static WorldPoint getWorldLocation() {
-		return Microbot.getRs2PlayerStateCache().getLocalPlayerPosition();
-	}
+            WorldView worldView = client.getTopLevelWorldView();
+            if (worldView != null && worldView.getScene() != null && worldView.getScene().isInstance()) {
+                LocalPoint localPoint = LocalPoint.fromWorld(worldView, localPlayer.getWorldLocation());
+                if (localPoint != null) {
+                    return WorldPoint.fromLocalInstance(client, localPoint);
+                }
+            }
 
-	/**
-	 * Retrieves the player's current {@link WorldView}.
-	 *
-	 * @return The {@link WorldView} representing the player's current world view, or {@code null} if unavailable.
-	 */
-	public static WorldView getWorldView() {
-		return Microbot.getRs2PlayerStateCache().getLocalPlayerWorldView();
-	}
+            return localPlayer.getWorldLocation();
+        }).orElse(null);
+    }
+
+    /**
+     * Retrieves the player's current {@link WorldView} from the client thread.
+     *
+     * @return The {@link WorldView} representing the player's current world view, or {@code null} if unavailable.
+     */
+    public static WorldView getWorldView_Internal() {
+        return Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Player player = Microbot.getClient().getLocalPlayer();
+            if (player == null) return null;
+            return player.getWorldView();
+        }).orElse(null);
+    }
+
+    /**
+     * Retrieves the player's current world location as a {@link WorldPoint}.
+     *
+     * <p>If the player is in an instanced world, the method converts the local position
+     * to an instanced {@link WorldPoint}. Otherwise, it returns the player's standard
+     * world location.</p>
+     *
+     * @return The {@link WorldPoint} representing the player's current location.
+     */
+    public static WorldPoint getWorldLocation() {
+        return Microbot.getRs2PlayerStateCache().getLocalPlayerPosition();
+    }
+
+    /**
+     * Retrieves the player's current {@link WorldView}.
+     *
+     * @return The {@link WorldView} representing the player's current world view, or {@code null} if unavailable.
+     */
+    public static WorldView getWorldView() {
+        return Microbot.getRs2PlayerStateCache().getLocalPlayerWorldView();
+    }
 
     /**
      * Retrieves the player's current location as an {@link Rs2WorldPoint}.
@@ -1043,28 +1285,28 @@ public class Rs2Player {
         if (worldPoint == null) {
             return false;
         }
-        
+
         // Validate radius parameters (should be non-negative)
         if (xRadius < 0 || yRadius < 0) {
             return false;
         }
-        
+
         WorldPoint playerLocation = getWorldLocation();
-        
+
         // Null check for player location
         if (playerLocation == null) {
             return false;
         }
-        
+
         // Ensure both points are on the same plane
         if (worldPoint.getPlane() != playerLocation.getPlane()) {
             return false;
         }
-        
+
         // Simple distance check - check if player is within the rectangular radius
         int deltaX = Math.abs(playerLocation.getX() - worldPoint.getX());
         int deltaY = Math.abs(playerLocation.getY() - worldPoint.getY());
-        
+
         return deltaX <= xRadius && deltaY <= yRadius;
     }
 
@@ -1078,46 +1320,46 @@ public class Rs2Player {
      * @param playerYSpan    The total height (in tiles) of the area around the player's position.
      * @return {@code true} if the player's area intersects with the target area, {@code false} otherwise.
      */
-    public static boolean isPlayerAreaIntersecting(WorldPoint targetPoint, int targetXSpan, int targetYSpan, 
-                                             int playerXSpan, int playerYSpan) {
+    public static boolean isPlayerAreaIntersecting(WorldPoint targetPoint, int targetXSpan, int targetYSpan,
+                                                   int playerXSpan, int playerYSpan) {
         // Null check for target point
         if (targetPoint == null) {
             return false;
         }
-        
+
         // Validate span parameters (should be non-negative)
         if (targetXSpan < 0 || targetYSpan < 0 || playerXSpan < 0 || playerYSpan < 0) {
             return false;
         }
-        
+
         WorldPoint playerLocation = getWorldLocation();
-        
+
         // Null check for player location
         if (playerLocation == null) {
             return false;
         }
-        
+
         // Ensure both points are on the same plane
         if (targetPoint.getPlane() != playerLocation.getPlane()) {
             return false;
         }
-        
+
         // Create target area centered on targetPoint
         WorldPoint targetSouthWest = new WorldPoint(
-            targetPoint.getX() - (targetXSpan /2), 
-            targetPoint.getY() - (targetYSpan / 2), 
-            targetPoint.getPlane()
+                targetPoint.getX() - (targetXSpan /2),
+                targetPoint.getY() - (targetYSpan / 2),
+                targetPoint.getPlane()
         );
         WorldArea targetArea = new WorldArea(targetSouthWest, targetXSpan, targetYSpan);
-        
+
         // Create player area centered on player location
         WorldPoint playerSouthWest = new WorldPoint(
-            playerLocation.getX() - (playerXSpan / 2), 
-            playerLocation.getY() - (playerYSpan / 2), 
-            playerLocation.getPlane()
+                playerLocation.getX() - (playerXSpan / 2),
+                playerLocation.getY() - (playerYSpan / 2),
+                playerLocation.getPlane()
         );
         WorldArea playerArea = new WorldArea(playerSouthWest, playerXSpan, playerYSpan);
-        
+
         return targetArea.intersectsWith2D(playerArea);
     }
 
@@ -1309,7 +1551,7 @@ public class Rs2Player {
      *
      * <p>If an anti-venom effect is active, no potion will be consumed.</p>
      *
-     * @return {@code true} if an anti-poison potion was found and used, 
+     * @return {@code true} if an anti-poison potion was found and used,
      *         or if the player already has an anti-venom effect, {@code false} otherwise.
      */
     public static boolean drinkAntiPoisonPotion() {
@@ -1322,7 +1564,7 @@ public class Rs2Player {
     /**
      * Drinks an anti-fire potion if the player does not have an active anti-fire effect.
      *
-     * @return {@code true} if an anti-fire potion was found and used, 
+     * @return {@code true} if an anti-fire potion was found and used,
      *         or if the player already has an active anti-fire effect, {@code false} otherwise.
      */
     public static boolean drinkAntiFirePotion() {
@@ -1335,7 +1577,7 @@ public class Rs2Player {
     /**
      * Drinks a goading potion if the player does not already have an active goading effect.
      *
-     * @return {@code true} if a goading potion was found and used, 
+     * @return {@code true} if a goading potion was found and used,
      *         {@code false} if the effect is already active or no potion was available.
      */
     public static boolean drinkGoadingPotion() {
@@ -1344,7 +1586,7 @@ public class Rs2Player {
         }
         return usePotion(Rs2Potion.getGoadingPotion());
     }
-    
+
     /**
      * Helper method to check for the presence of any item in the provided IDs and interact with it.
      *
@@ -1355,9 +1597,9 @@ public class Rs2Player {
         Rs2ItemModel potion = Rs2Inventory.get(item ->
                 !item.isNoted() && Arrays.stream(itemIds).anyMatch(id -> id == item.getId())
         );
-        
+
         if (potion == null) return false;
-        
+
         return Rs2Inventory.interact(potion, "drink");
     }
 
@@ -1371,7 +1613,7 @@ public class Rs2Player {
         Rs2ItemModel potion = Rs2Inventory.get(item ->
                 !item.isNoted() && Arrays.stream(itemIds).anyMatch(id -> id == item.getId())
         );
-        
+
         return potion != null;
     }
 
@@ -1408,7 +1650,7 @@ public class Rs2Player {
 
         return Rs2Inventory.interact(potion, action);
     }
-    
+
     /**
      * Checks for the presence of any item in the provided names within the inventory.
      *
@@ -1429,7 +1671,7 @@ public class Rs2Player {
 
             return false;
         });
-        
+
         return potion != null;
     }
 
@@ -1623,7 +1865,7 @@ public class Rs2Player {
      * <p>This method determines the lowest idle time between mouse and keyboard activity
      * and compares it to the client's idle timeout, factoring in a specified random delay.</p>
      *
-     * @param randomDelay The time (in ticks) to subtract from the client's idle timeout 
+     * @param randomDelay The time (in ticks) to subtract from the client's idle timeout
      *                    to introduce variability in detecting inactivity.
      * @return {@code true} if the player's idle time exceeds or equals the adjusted timeout, {@code false} otherwise.
      */
@@ -1648,7 +1890,7 @@ public class Rs2Player {
         return Rs2Player.getWorldLocation().getY() >= 6400
                 && !Microbot.getClient().getTopLevelWorldView().isInstance();
     }
-    
+
     /**
      * Checks whether the player is currently in an instanced world.
      *
@@ -1685,7 +1927,7 @@ public class Rs2Player {
     /**
      * Retrieves the current graphic ID of the local player.
      *
-     * <p>This ID represents the graphical effect currently applied to the player, 
+     * <p>This ID represents the graphical effect currently applied to the player,
      * such as spell casts or special attack animations.</p>
      *
      * @return The graphic ID of the local player.
@@ -1697,7 +1939,7 @@ public class Rs2Player {
     /**
      * Checks if the local player has a specific spot animation active.
      *
-     * <p>Spot animations (also known as graphics IDs) are special visual effects 
+     * <p>Spot animations (also known as graphics IDs) are special visual effects
      * applied to the player, such as teleportation effects or status conditions.</p>
      *
      * @param graphicId The graphic ID of the spot animation to check. See {@link GraphicID} for predefined values.
@@ -1789,7 +2031,7 @@ public class Rs2Player {
     public static boolean use(Rs2PlayerModel rs2Player) {
         return invokeMenu(rs2Player, "use");
     }
-    
+
     /**
      * Selects the "CHALLENGE" option on a player for Soul Wars.
      *
@@ -1860,9 +2102,30 @@ public class Rs2Player {
      */
     public static Actor getInteracting() {
         Optional<Actor> result = Microbot.getClientThread().runOnClientThreadOptional(() -> {
-            if (Microbot.getClient().getLocalPlayer() == null) return null;
+            if (Microbot.getClient() == null || Microbot.getClient().getLocalPlayer() == null) return null;
 
-            var interactingActor = Microbot.getClient().getLocalPlayer().getInteracting();
+            Player localPlayer = Microbot.getClient().getLocalPlayer();
+            Actor interactingActor = localPlayer.getInteracting();
+
+            if (!isValidInteractionTarget(interactingActor)) {
+                return null;
+            }
+
+            boolean recentlyAnimated = lastAnimationTime != null
+                    && Duration.between(lastAnimationTime, Instant.now()).toMillis() < 600;
+            boolean animating = recentlyAnimated || localPlayer.getAnimation() != AnimationID.IDLE;
+            boolean moving = localPlayer.getPoseAnimation() != localPlayer.getIdlePoseAnimation();
+
+            if (isMeaningfulInteraction(localPlayer, interactingActor, moving, animating)) {
+                lastRealInteractionTime = System.currentTimeMillis();
+            }
+
+            boolean recentlyInteracting =
+                    System.currentTimeMillis() - lastRealInteractionTime < INTERACTION_STALE_MS;
+
+            if (!recentlyInteracting) {
+                return null;
+            }
 
             if (interactingActor instanceof net.runelite.api.NPC) {
                 return new Rs2NpcModel((NPC) interactingActor);
